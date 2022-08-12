@@ -1,2 +1,3 @@
 # DirectReconstruct
- Direct REconstruction of Higher Dim Images from Lower Dim Projections
+ Direct Reconstruction of Higher Dimensional Images from Lower Dimensional Projections Using Simple Neural Networks
+
