@@ -41,7 +41,7 @@ proj_sz = len(proj_angs)
 proj_mat = np.zeros((proj_sz, det_sz))
 
 
-# Project the matrix to the detector for each angle θ.
+# Pixel Coordinates
 # 
 # First, we need to get the (x,y) coordinates for each image pixel.
 # for X, Y axes passing through the image center, the center locations (x, y) of
@@ -116,3 +116,55 @@ mat_x_45, mat_y_45 = rotate_xy(mat_x_0, mat_y_0, 45)
 # print((mat_x_45[0, 0], mat_y_45[0, 0]), (mat_x_45[9, 9], mat_y_45[9, 9]))   # (-6.3639610306789285, 0.0) (6.3639610306789285, 0.0)
 # print( 4.5 * np.sqrt(2))    # 6.3639610306789285
 
+
+# Project the matrix to the detector for each angle θ.
+# 
+# First we define a simple "nearest-element-center" projection rule:
+# (1) Each pixel representative (center) is projected vertically on a detector plane below
+# (2) The detector element assigned to the pixel is the one where the pixel center lands
+# (3) Later, we can try other forms of dividing pixel information amonf nearby elements
+# (4) Since we are projecting along the y-axis, we only need the x coords.
+
+# First, a function to assign detector element index to each matrix element:
+# General formula for assigning detector element index for an matrix elm with xcoord:
+
+# k_x = floor(x/d) + det_sz/2                           : for det_sz even
+# k_x = floor(x/d - 0.5) + (det_sz + 1)/2               : for det_sz odd
+
+# inputs:
+# mat_x: physical x coords of each mtrix elm,
+# det_sz: number of detector elements
+# det_elm_len: physical length of the detector element (arb units)
+# crop_outside: indices outside the detector range, should we turn to None, or leave them as is
+# output:
+# mat_det_idx: matrix with the index of detector elm where each pixel is projected on
+def mat_det_proj_y(mat_x, det_sz, det_elm_sz=1.0, crop_outside=True):
+    mat_det_idx = np.zeros(mat_x.shape)
+    
+    if det_sz % 2 == 0:
+        mat_det_idx = np.floor(mat_x / det_elm_sz) + det_sz / 2
+    else:
+        mat_det_idx = np.floor(mat_x / det_elm_sz - 0.5) + (det_sz + 1) / 2
+
+    trans1 = lambda z: np.round(z).astype("int")
+    if crop_outside:
+        trans2 = lambda z: z if (0 <= z <= det_sz - 1) else None
+    else:
+        trans2 = lambda z: z   # do nothing
+
+    return np.array([trans2(trans1((z))) for z in mat_det_idx.ravel()]).reshape(mat_x.shape)
+    # return np.round(mat_det_idx).astype("int")
+
+# project the original (and rotated matrices on a detector of size 10, elm length 1.0:
+mat_det_idx_0 = mat_det_proj_y(mat_x_0, 10, 1.0)
+mat_det_idx_45 = mat_det_proj_y(mat_x_45, 10, 1.0, crop_outside=True)
+
+
+print("projection indices of the original and 45deg rotated matrices (first and last rows)")
+print(mat_det_idx_0[0, :], mat_det_idx_0[-1, :])
+# [0 1 2 3 4 5 6 7 8 9] [0 1 2 3 4 5 6 7 8 9]
+print(mat_det_idx_45[0, :], mat_det_idx_45[-1, :])
+# [-2 -1  0  0  1  2  2  3  4  5] [ 5  5  6  7  7  8  9  9 10 11]   (crop_outside False)
+# [None None 0 0 1 2 2 3 4 5] [5 5 6 7 7 8 9 9 None None]           (with crop_outside True)
+
+# Note: after the 45deg rotation, some of the pixels fall outside the array
