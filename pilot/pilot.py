@@ -13,7 +13,7 @@ import matplotlib.cm as cm
 
 # Define the image matrix (2D)
 im_pix_sz = 1.0                     # physical size of a pixel. Arbitrary units
-im_mat_sz = (10, 10)                # matrix size
+im_mat_sz = (10, 10)                # matrix size: N, M
 im_mat = np.zeros(im_mat_sz)   # image matrix
 im_mat[2, 3] = 1.0                  # single pixel image
 
@@ -43,10 +43,6 @@ proj_mat = np.zeros((proj_sz, det_sz))
 
 # Project the matrix to the detector for each angle θ.
 # 
-# Note: Rotating Detector by θ is equivalent to rotating the image matrix by -θ
-# for the 2D case, a rotation by θ in the (x,y) plane is defined by:
-# [ [ cos(θ) , -sin(θ)] , [sin(θ) , cos(θ)] ]
-# 
 # First, we need to get the (x,y) coordinates for each image pixel.
 # for X, Y axes passing through the image center, the center locations (x, y) of
 # a pixel in the (u, v) row/column is given by:
@@ -57,11 +53,66 @@ def pixel_coords(u, v, matrix_size=(10, 10), im_pix_size=1.0):
     # returns (x, y) coordinates of (u, v) in physical units
     N, M = matrix_size
 
-    x = - (M - 1) / 2 + v
-    y =   (N - 1) / 2 - u
+    x = - (M - 1) / 2.0 + v
+    y =   (N - 1) / 2.0 - u
 
     return (im_pix_size * x, im_pix_size * y)
 
 # print("x, y physical coords for the (0,0) and (9,9) elements in a 10x10 matrix with unit pixel length:")
 # print(pixel_coords(0, 0, (10,10), 1.0), pixel_coords(9, 9, (10,10), 1.0)) # (-4.5, 4.5) (4.5, -4.5)
+
+
+# Rotation of the image matrix
+# First, build separate x and y coordinate matrices
+# 0 indicates before rotation applied
+
+# initializing of original (0) x and y coordinate matrices:
+mat_x_0 = np.zeros(im_mat_sz)
+mat_y_0 = np.zeros(im_mat_sz)
+
+N, M = im_mat_sz
+for u in range(N):
+    for v in range(M):
+        mat_x_0[u, v] = -(M - 1) / 2.0 + v
+        mat_y_0[u, v] = (N - 1) / 2.0 - u
+
+mat_x_0 *= im_pix_sz    # 1.0 here. for completeness
+mat_y_0 *= im_pix_sz
+
+# print("x, y physical coords for the (0,0) and (9,9) elements in a 10x10 matrix with unit pixel length:")
+# print((mat_x_0[0, 0], mat_y_0[0, 0]), (mat_x_0[9, 9], mat_y_0[9, 9]))   # (-4.5, 4.5) (4.5, -4.5)
+
+
+# Applying the rotation (the right hand rule):
+# inputs are the coordinate matrices. 
+# outputs are new x and y rotated matrices
+# 
+# Note: Rotating Detector by θ is equivalent to rotating the image matrix by -θ
+# for the 2D case, a rotation by θ in the (x,y) plane is defined by:
+# [ [ cos(θ) , -sin(θ)] , [sin(θ) , cos(θ)] ]
+# using degrees for theta
+def rotate_xy(mat_x, mat_y, theta):
+
+    if mat_x.shape != mat_y.shape:
+        raise Exception("Input x and y matrices should be the same size.") 
+    
+    N, M = mat_x.shape
+    mat_x_th = np.zeros((N, M))
+    mat_y_th = np.zeros((N, M))
+
+    cos_th = np.cos(theta * np.pi / 180)
+    sin_th = np.sin(theta * np.pi / 180)
+
+    for u in range(N):
+        for v in range(M):
+            mat_x_th[u, v] = cos_th * mat_x[u, v] - sin_th * mat_y[u, v]
+            mat_y_th[u, v] = sin_th * mat_x[u, v] + cos_th * mat_y[u, v]
+
+    return mat_x_th, mat_y_th
+
+mat_x_45, mat_y_45 = rotate_xy(mat_x_0, mat_y_0, 45)
+
+# print("After the 45deg rotation: x, y coords for the (0,0) and (9,9) elements :")
+# print((mat_x_45[0, 0], mat_y_45[0, 0]), (mat_x_45[9, 9], mat_y_45[9, 9]))   # (-6.3639610306789285, 0.0) (6.3639610306789285, 0.0)
+# print( 4.5 * np.sqrt(2))    # 6.3639610306789285
 
