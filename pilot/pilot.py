@@ -1,11 +1,17 @@
 # The Pilot Project
 
-from distutils.command.build import build
+# from distutils.command.build import build
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
+from sklearn.linear_model import Lasso
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import ElasticNet
 
 # # Print Versions:
 # print("python version:", sys.version)   # python version: 3.10.6
@@ -210,18 +216,18 @@ for t_idx, theta in enumerate(proj_angs):
     proj_mat[t_idx] = mat_det_proj(im_mat, mat_det_idx, det_sz)
 
 
-print("projection matrix for (2, 3) one-hot matrix")
-print(proj_mat)
-# [[0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
-#  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
-#  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
-#  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
-#  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
-#  [0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
-#  [0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
-#  [0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
-#  [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
-#  [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]]
+# print("projection matrix for (2, 3) one-hot matrix")
+# print(proj_mat)
+# # [[0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]]
 
 # # quick plot of projections
 # fig, ax = plt.subplots()
@@ -322,4 +328,28 @@ proj_mats_one_hot = gen_one_hot_projs(one_hot_mats,
 # ax.imshow(proj_mats_one_hot[2, 3], 
 #             cmap=cm.get_cmap("plasma"))   # cm.gray
 # plt.show()
+
+
+# Linear Modeling Using Scikit-Learn
+# for now, not using sparse erpresentations
+sklr = LinearRegression(fit_intercept=False, n_jobs=-1)
+
+# prepare X and y:
+# basically reshaping the input one_hot image matrix to (n_samples, n_features) = (NumAngs * DetLen, N * M)
+# and reshaping the projection matrix to (n_samples, n_targets) = (N*M, N*M)
+def prepare_one_hot_Xy(proj_mats_one_hot, one_hot_mats, num_angs, det_sz):
+    # validate
+    N, M, NN, MM = one_hot_mats.shape
+    if (N != NN or M != MM):
+        raise Exception(f"Input `one_hot_mats` should be of shape (A B A B). You gave me: {one_hot_mats.shape}")
+    
+    proj_mat_len = len(proj_mats_one_hot)
+    exp_proj_len = N * M * num_angs * det_sz
+    if (proj_mat_len != exp_proj_len):
+        raise Exception(f"Input `proj_mats_one_hot` should have the length {exp_proj_len}. Not with {(N, M, num_angs, det_sz)}.")
+
+    # transpose since we are switching the order to (n_samples, n_features)
+    X = proj_mats_one_hot.reshape(N * M, num_angs * det_sz).transpose() 
+    y = one_hot_mats.reshape(N * M, N * M)
+    return X, y
 
