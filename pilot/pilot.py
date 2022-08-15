@@ -1,5 +1,6 @@
 # The Pilot Project
 
+from distutils.command.build import build
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -31,23 +32,13 @@ im_mat[2, 3] = 1.0                  # single pixel image
 det_elm_sz = 1.0
 det_sz = 10
 
-# Define the angles of projection
-proj_angs = np.linspace(-90, +90, 10, endpoint=False)
-proj_sz = len(proj_angs)
-# print(proj_angs)    # [-90. -72. -54. -36. -18.   0.  18.  36.  54.  72.]
-# print(proj_sz)      # 10
-
-# Define the projection matrix (2D)
-proj_mat = np.zeros((proj_sz, det_sz))
-
-
 # Pixel Coordinates
 # 
 # First, we need to get the (x,y) coordinates for each image pixel.
 # for X, Y axes passing through the image center, the center locations (x, y) of
 # a pixel in the (u, v) row/column is given by:
 
-def pixel_coords(u, v, matrix_size=(10, 10), im_pix_size=1.0):
+def pixel_coords(u, v, matrix_size, im_pix_size=1.0):
     # u, v are te row, column indices, respectively
     # N, M are the height and width of the image matrix (in pixels)
     # returns (x, y) coordinates of (u, v) in physical units
@@ -66,18 +57,37 @@ def pixel_coords(u, v, matrix_size=(10, 10), im_pix_size=1.0):
 # First, build separate x and y coordinate matrices
 # 0 indicates before rotation applied
 
-# initializing of original (0) x and y coordinate matrices:
-mat_x_0 = np.zeros(im_mat_sz)
-mat_y_0 = np.zeros(im_mat_sz)
+# # initializing of original (0) x and y coordinate matrices:
+# mat_x_0 = np.zeros(im_mat_sz)
+# mat_y_0 = np.zeros(im_mat_sz)
 
-N, M = im_mat_sz
-for u in range(N):
-    for v in range(M):
-        mat_x_0[u, v] = -(M - 1) / 2.0 + v
-        mat_y_0[u, v] = (N - 1) / 2.0 - u
+# N, M = im_mat_sz
+# for u in range(N):
+#     for v in range(M):
+#         mat_x_0[u, v] = -(M - 1) / 2.0 + v
+#         mat_y_0[u, v] = (N - 1) / 2.0 - u
 
-mat_x_0 *= im_pix_sz    # 1.0 here. for completeness
-mat_y_0 *= im_pix_sz
+# mat_x_0 *= im_pix_sz    # 1.0 here. for completeness
+# mat_y_0 *= im_pix_sz
+
+# Let's make a function to take care of generating mat_x and mat_y
+
+def gen_mat_x_mat_y(im_mat_sz, im_pix_sz=1.0):
+    mat_x = np.zeros(im_mat_sz)
+    mat_y = np.zeros(im_mat_sz)
+
+    N, M = im_mat_sz
+    for u in range(N):
+        for v in range(M):
+            mat_x[u, v] = -(M - 1) / 2.0 + v
+            mat_y[u, v] = (N - 1) / 2.0 - u
+    # normalize physical coordinates
+    mat_x *= im_pix_sz
+    mat_y *= im_pix_sz
+
+    return mat_x, mat_y
+
+mat_x_0, mat_y_0 = gen_mat_x_mat_y(im_mat_sz, im_pix_sz)
 
 # print("x, y physical coords for the (0,0) and (9,9) elements in a 10x10 matrix with unit pixel length:")
 # print((mat_x_0[0, 0], mat_y_0[0, 0]), (mat_x_0[9, 9], mat_y_0[9, 9]))   # (-4.5, 4.5) (4.5, -4.5)
@@ -97,16 +107,12 @@ def rotate_xy(mat_x, mat_y, theta):
         raise Exception("Input x and y matrices should be the same size.") 
     
     N, M = mat_x.shape
-    mat_x_th = np.zeros((N, M))
-    mat_y_th = np.zeros((N, M))
 
     cos_th = np.cos(theta * np.pi / 180)
     sin_th = np.sin(theta * np.pi / 180)
 
-    for u in range(N):
-        for v in range(M):
-            mat_x_th[u, v] = cos_th * mat_x[u, v] - sin_th * mat_y[u, v]
-            mat_y_th[u, v] = sin_th * mat_x[u, v] + cos_th * mat_y[u, v]
+    mat_x_th = mat_x * cos_th - mat_y * sin_th
+    mat_y_th = mat_x * sin_th + mat_y * cos_th
 
     return mat_x_th, mat_y_th
 
@@ -138,7 +144,7 @@ mat_x_45, mat_y_45 = rotate_xy(mat_x_0, mat_y_0, 45)
 # crop_outside: indices outside the detector range, should we turn to None, or leave them as is
 # output:
 # mat_det_idx: matrix with the index of detector elm where each pixel is projected on
-def mat_det_proj_y(mat_x, det_sz, det_elm_sz=1.0, crop_outside=True):
+def mat_det_idx_y(mat_x, det_sz, det_elm_sz=1.0, crop_outside=True):
     mat_det_idx = np.zeros(mat_x.shape)
     
     if det_sz % 2 == 0:
@@ -156,15 +162,164 @@ def mat_det_proj_y(mat_x, det_sz, det_elm_sz=1.0, crop_outside=True):
     # return np.round(mat_det_idx).astype("int")
 
 # project the original (and rotated matrices on a detector of size 10, elm length 1.0:
-mat_det_idx_0 = mat_det_proj_y(mat_x_0, 10, 1.0)
-mat_det_idx_45 = mat_det_proj_y(mat_x_45, 10, 1.0, crop_outside=True)
+mat_det_idx_0 = mat_det_idx_y(mat_x_0, 10, 1.0)
+mat_det_idx_45 = mat_det_idx_y(mat_x_45, 10, 1.0, crop_outside=True)
 
 
-print("projection indices of the original and 45deg rotated matrices (first and last rows)")
-print(mat_det_idx_0[0, :], mat_det_idx_0[-1, :])
-# [0 1 2 3 4 5 6 7 8 9] [0 1 2 3 4 5 6 7 8 9]
-print(mat_det_idx_45[0, :], mat_det_idx_45[-1, :])
-# [-2 -1  0  0  1  2  2  3  4  5] [ 5  5  6  7  7  8  9  9 10 11]   (crop_outside False)
-# [None None 0 0 1 2 2 3 4 5] [5 5 6 7 7 8 9 9 None None]           (with crop_outside True)
+# print("Projection indices of the original and the 45deg rotated matrices (first and last rows)")
+# print(mat_det_idx_0[0, :], mat_det_idx_0[-1, :])
+# # [0 1 2 3 4 5 6 7 8 9] [0 1 2 3 4 5 6 7 8 9]
+# print(mat_det_idx_45[0, :], mat_det_idx_45[-1, :])
+# # [-2 -1  0  0  1  2  2  3  4  5] [ 5  5  6  7  7  8  9  9 10 11]   (crop_outside False)
+# # [None None 0 0 1 2 2 3 4 5] [5 5 6 7 7 8 9 9 None None]           (with crop_outside True)
 
 # Note: after the 45deg rotation, some of the pixels fall outside the array
+
+# Next, after finding the detector element indices, we calculate the actual projection 
+# values by summing values for detector indices in the index matrix
+
+def mat_det_proj(img_mat, mat_det_idx, det_sz):
+    det_out = np.zeros(det_sz)
+    N, M = img_mat.shape
+
+    for u in range(N):
+        for v in range(M):
+            idx = mat_det_idx[u, v]
+            if (idx is not None) and (0 <= idx <= det_sz - 1):
+                det_out[idx] += img_mat[u, v]
+    
+    return det_out
+
+
+# Projection for all angles
+#
+# Define the angles of projection
+proj_angs = np.linspace(-90, +90, 10, endpoint=False)
+proj_sz = len(proj_angs)
+# print(proj_angs)    # [-90. -72. -54. -36. -18.   0.  18.  36.  54.  72.]
+# print(proj_sz)      # 10
+
+# Define the projection matrix (2D)
+proj_mat = np.zeros((proj_sz, det_sz))
+
+# run projection for all angles:
+for t_idx, theta in enumerate(proj_angs):
+    # -theta since matrix is rotated opposite w.r.t the detector
+    mat_x_th, mat_y_th = rotate_xy(mat_x_0, mat_y_0, -1 * theta)
+    mat_det_idx = mat_det_idx_y(mat_x_th, det_sz, det_elm_sz, crop_outside=True)
+    proj_mat[t_idx] = mat_det_proj(im_mat, mat_det_idx, det_sz)
+
+
+print("projection matrix for (2, 3) one-hot matrix")
+print(proj_mat)
+# [[0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+#  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+#  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+#  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+#  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+#  [0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
+#  [0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+#  [0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
+#  [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
+#  [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]]
+
+# # quick plot of projections
+# fig, ax = plt.subplots()
+
+# ax.imshow(proj_mat, 
+#             cmap=cm.get_cmap("plasma"))   # cm.gray
+
+# plt.show()
+
+
+# Now, let's build the one-hot-pixel images
+# Here we will be using just a dense representation. At some point, we will be 
+# switching to sparse representations
+
+# retuens a 4D matrix, where the i,j component is a matrix with index i,j eq to one, rest zero.
+# A shortcut way of building it is to reshape the identity matrix of size NM by NM
+def build_one_hot_mats(im_mat_sz):
+    N, M = im_mat_sz
+    # one_hot_out_mats = np.zeros((N, M, N, M))
+    one_hot_2D = np.eye(N * M)
+    one_hot_out_mats = one_hot_2D.reshape((N, M, N, M))
+
+    return one_hot_out_mats
+
+
+one_hot_mats = build_one_hot_mats(im_mat_sz)
+
+# print("one-hot 10x10 matrix elemets for index (3, 8) ")
+# print(one_hot_mats[3, 8])
+# # [[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 0. 0. 1. 0.]      <=== one hot at [3, 8]
+# #  [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]]
+
+# fig, ax = plt.subplots()
+# ax.imshow(one_hot_mats[3, 8], 
+#             cmap=cm.get_cmap("plasma"))   # cm.gray
+# plt.show()
+
+
+# Now let's generate projections for all the one-hot images
+# putting everything together here
+
+def gen_one_hot_projs(one_hot_mats, proj_angs, det_sz, im_pix_sz=1.0, det_elm_sz=1.0):
+    # validate and process inputs
+    N, M, NN, MM = one_hot_mats.shape
+    if (N != NN or M != MM):
+        raise Exception(f"Input `one_hot_mats` should be of shape (A B A B). You gave me: {one_hot_mats.shape}")
+    angles_sz = len(proj_angs)
+
+    # initialize the 4D projection matrix
+    proj_mat_one_hot = np.zeros((N, M, angles_sz, det_sz))
+
+    # get physical coordinates mat_x_0 mat_y_0 before any rotation
+    mat_x_0, mat_y_0 = gen_mat_x_mat_y((N, M), im_pix_sz=im_pix_sz)
+
+    # for each angle theta, get the mat_x_th for -theta rotation
+    # then calculate projections for all one hot matrices for that theta
+
+    for (th_idx, theta) in enumerate(proj_angs):
+        mat_x_th, _ = rotate_xy(mat_x_0, mat_y_0, -1 * theta)    # rotate by -theta
+        mat_det_idx = mat_det_idx_y(mat_x_th, det_sz, det_elm_sz, crop_outside=True)    # generate index mat
+        # do the projection for all one-hot matrices
+        for i in range(N):
+            for j in range(M):
+                proj_mat_one_hot[i, j, th_idx] = mat_det_proj(one_hot_mats[i, j], mat_det_idx, det_sz)
+
+    return proj_mat_one_hot
+
+
+proj_mats_one_hot = gen_one_hot_projs(one_hot_mats,
+                                        proj_angs,
+                                        det_sz,
+                                        im_pix_sz=im_pix_sz,
+                                        det_elm_sz=det_elm_sz)
+
+# print("projections of the (2, 3) one-hot image:")
+# print(np.squeeze(proj_mats_one_hot[2, 3]))
+# # [[0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]]
+
+# # quick plot of projections for the 2-3 one-hot image
+# fig, ax = plt.subplots()
+# ax.imshow(proj_mats_one_hot[2, 3], 
+#             cmap=cm.get_cmap("plasma"))   # cm.gray
+# plt.show()
+
