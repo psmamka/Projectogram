@@ -363,17 +363,17 @@ X, y = prepare_one_hot_Xy(proj_mats_one_hot, one_hot_mats, len(proj_angs), det_s
 
 # Let's look at the training data rank:
 X_rank = np.linalg.matrix_rank(X)
-print(f"Rank of Training Matrix X: ==> {X_rank} <==\n\
-    required number of rows for full recon: {N * M}\n\
-    for:\
-    image matrix size {im_mat_sz}\n\
-    projection angles: {proj_angs}\n\
-    total number of projs: {proj_angs.size}")
-# Rank of Training Matrix X: ==> 94 <==
-#     required number of rows for full recon: 100
-#     for:    image matrix size (10, 10)
-#     projection angles: [-90. -72. -54. -36. -18.   0.  18.  36.  54.  72.]
-#     total number of projs: 10
+# print(f"Rank of Training Matrix X: ==> {X_rank} <==\n\
+#     required number of rows for full recon: {N * M}\n\
+#     for:\
+#     image matrix size {im_mat_sz}\n\
+#     projection angles: {proj_angs}\n\
+#     total number of projs: {proj_angs.size}")
+# # Rank of Training Matrix X: ==> 94 <==
+# #     required number of rows for full recon: 100
+# #     for:    image matrix size (10, 10)
+# #     projection angles: [-90. -72. -54. -36. -18.   0.  18.  36.  54.  72.]
+# #     total number of projs: 10
 
 
 # Fit the model
@@ -421,3 +421,53 @@ max_err = np.amax(np.absolute(y - y_pred))
 # plt.show()
 
 # In this setting, with 6% loss in rank we have upto 14% deviations in pixel value deviations.
+
+# Looking at the root mean square error and mean absolute error:
+rmse_train = mean_squared_error(y, y_pred, squared=False)
+mae_train = mean_absolute_error(y, y_pred)
+
+# print(f"Linear OLS fit Root Mean Square Error: {rmse_train:.4f}\nMean Absolute Error: {mae_train:.4f}")
+# # Root Mean Square Error: 0.0241
+# # Mean Absolute Error: 0.0180
+
+# Next, we will look into regularized methods for a better reconstruction performance
+
+# # LASSO regression:
+# lasso = Lasso(alpha=0.1)
+# lasso.fit(X, y)
+# y_lasso = lasso.predict(X)
+
+# rmse_lasso = mean_squared_error(y, y_lasso, squared=False)
+# mae_lasso = mean_absolute_error(y, y_lasso)
+# print(f"LASSO fit:\nRoot Mean Square Error: {rmse_lasso:.4f}\nMean Absolute Error: {mae_lasso:.4f}")
+# # LASSO fit:
+# # Root Mean Square Error: 0.0995
+# # Mean Absolute Error: 0.0198
+# # much larger RMSE error (10% vs 2.4% from OLS), similar MAE 
+
+# # Ridge regression:
+# ridge = Ridge(alpha=1.0)
+# ridge.fit(X, y)
+# y_ridge = ridge.predict(X)
+
+# rmse_ridge = mean_squared_error(y, y_ridge, squared=False)
+# mae_ridge = mean_absolute_error(y, y_ridge)
+# print(f"Ridge fit:\nRoot Mean Square Error: {rmse_ridge:.4f}\nMean Absolute Error: {mae_ridge:.4f}")
+# # Ridge fit:
+# # Root Mean Square Error: 0.0490
+# # Mean Absolute Error: 0.0259
+# # Larger rmse (5%) and mae (2.6%) compared to OLS 
+
+# # Elastic Net regression:
+# el_net = ElasticNet(alpha=0.1, l1_ratio=0.001)
+# el_net.fit(X, y)
+# y_el_net = el_net.predict(X)
+
+# rmse_el_net = mean_squared_error(y, y_el_net, squared=False)
+# mae_el_net = mean_absolute_error(y, y_el_net)
+# print(f"Elastic Net fit:\nRoot Mean Square Error: {rmse_el_net:.4f}\nMean Absolute Error: {mae_el_net:.4f}")
+# # Elastic Net fit:
+# # Root Mean Square Error: 0.0694
+# # Mean Absolute Error: 0.0237
+# # Similar to LASSO, poor rmse performance even with small alpha values
+
