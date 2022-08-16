@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
@@ -332,7 +333,7 @@ proj_mats_one_hot = gen_one_hot_projs(one_hot_mats,
 
 # Linear Modeling Using Scikit-Learn
 # for now, not using sparse erpresentations
-sklr = LinearRegression(fit_intercept=False, n_jobs=-1)
+sk_lr = LinearRegression(fit_intercept=False, n_jobs=-1)
 
 # prepare X and y:
 # basically reshaping the input one_hot image matrix to (n_samples, n_features) = (NumAngs * DetLen, N * M)
@@ -343,13 +344,50 @@ def prepare_one_hot_Xy(proj_mats_one_hot, one_hot_mats, num_angs, det_sz):
     if (N != NN or M != MM):
         raise Exception(f"Input `one_hot_mats` should be of shape (A B A B). You gave me: {one_hot_mats.shape}")
     
-    proj_mat_len = len(proj_mats_one_hot)
-    exp_proj_len = N * M * num_angs * det_sz
-    if (proj_mat_len != exp_proj_len):
-        raise Exception(f"Input `proj_mats_one_hot` should have the length {exp_proj_len}. Not with {(N, M, num_angs, det_sz)}.")
+    proj_mat_size = proj_mats_one_hot.size
+    exp_proj_size = N * M * num_angs * det_sz
+    if (proj_mat_size != exp_proj_size):
+        raise Exception(f"Input `proj_mats_one_hot` should have the length {exp_proj_size}. Not with {(N, M, num_angs, det_sz)} => {proj_mat_len}.")
 
     # transpose since we are switching the order to (n_samples, n_features)
     X = proj_mats_one_hot.reshape(N * M, num_angs * det_sz).transpose() 
     y = one_hot_mats.reshape(N * M, N * M)
     return X, y
 
+
+X, y = prepare_one_hot_Xy(proj_mats_one_hot, one_hot_mats, len(proj_angs), det_sz)
+
+# print(f"X shape: {X.shape}, y shape: {y.shape}" )
+# # X shape: (100, 100), y shape: (100, 100)
+
+# Fit the model
+sk_lr.fit(X, y)
+
+# Test the model using original input:
+y_pred = sk_lr.predict(X)
+
+max_err = np.amax(np.absolute(y - y_pred))
+# print(f"maximum error between y and y_pred: {max_err}")
+# # maximum error between y and y_pred: 0.14141845703125
+# # so we have errors of up to ~ 14% in reconstruction
+
+
+# fig, axs = plt.subplots(nrows=1, ncols=2)
+# im0 = axs[0].imshow(y, cmap=cm.get_cmap("plasma"))
+# axs[0].set_title("y")
+# im1 = axs[1].imshow(y_pred, cmap=cm.get_cmap("plasma"))
+# axs[1].set_title("y_pred")
+# # create an axes on the right side of ax. The width of cax will be 5%
+# # of ax and the padding between cax and ax will be fixed at 0.05 inch.
+# divider = make_axes_locatable(axs[1])
+# cax = divider.append_axes("right", size="5%", pad=0.05)
+# plt.colorbar(im1, cax=cax)
+# plt.show()
+
+# fig, ax = plt.subplots()
+# im = ax.imshow(y_pred - y, cmap=cm.get_cmap("plasma"))
+# ax.set_title("Error: y_pred - y")
+# divider = make_axes_locatable(ax)
+# cax = divider.append_axes("right", size="5%", pad=0.05)
+# plt.colorbar(im, cax=cax)
+# plt.show()
