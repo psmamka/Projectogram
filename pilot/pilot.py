@@ -22,6 +22,7 @@ from sklearn.linear_model import ElasticNet
 # Define the image matrix (2D)
 im_pix_sz = 1.0                     # physical size of a pixel. Arbitrary units
 im_mat_sz = (10, 10)                # matrix size: N, M
+N, M = im_mat_sz                    # for convenient use
 im_mat = np.zeros(im_mat_sz)   # image matrix
 im_mat[2, 3] = 1.0                  # single pixel image
 
@@ -360,6 +361,21 @@ X, y = prepare_one_hot_Xy(proj_mats_one_hot, one_hot_mats, len(proj_angs), det_s
 # print(f"X shape: {X.shape}, y shape: {y.shape}" )
 # # X shape: (100, 100), y shape: (100, 100)
 
+# Let's look at the training data rank:
+X_rank = np.linalg.matrix_rank(X)
+print(f"Rank of Training Matrix X: ==> {X_rank} <==\n\
+    required number of rows for full recon: {N * M}\n\
+    for:\
+    image matrix size {im_mat_sz}\n\
+    projection angles: {proj_angs}\n\
+    total number of projs: {proj_angs.size}")
+# Rank of Training Matrix X: ==> 94 <==
+#     required number of rows for full recon: 100
+#     for:    image matrix size (10, 10)
+#     projection angles: [-90. -72. -54. -36. -18.   0.  18.  36.  54.  72.]
+#     total number of projs: 10
+
+
 # Fit the model
 sk_lr.fit(X, y)
 
@@ -371,7 +387,7 @@ max_err = np.amax(np.absolute(y - y_pred))
 # # maximum error between y and y_pred: 0.14141845703125
 # # so we have errors of up to ~ 14% in reconstruction
 
-
+# # plot y, y_pred side by side
 # fig, axs = plt.subplots(nrows=1, ncols=2)
 # im0 = axs[0].imshow(y, cmap=cm.get_cmap("plasma"))
 # axs[0].set_title("y")
@@ -384,6 +400,7 @@ max_err = np.amax(np.absolute(y - y_pred))
 # plt.colorbar(im1, cax=cax)
 # plt.show()
 
+# # plot Error
 # fig, ax = plt.subplots()
 # im = ax.imshow(y_pred - y, cmap=cm.get_cmap("plasma"))
 # ax.set_title("Error: y_pred - y")
@@ -391,3 +408,16 @@ max_err = np.amax(np.absolute(y - y_pred))
 # cax = divider.append_axes("right", size="5%", pad=0.05)
 # plt.colorbar(im, cax=cax)
 # plt.show()
+
+# # plot sample reconstructed image i, j = (2, 3)
+# i, j = (2, 3)
+# fig, ax = plt.subplots()
+# im_recon_ij = y_pred.reshape(N, M, len(proj_angs), det_sz)[i, j]
+# im = ax.imshow(im_recon_ij, cmap=cm.get_cmap("plasma"))
+# ax.set_title(f"Error: one hot {(i, j)} reconstruction")
+# divider = make_axes_locatable(ax)
+# cax = divider.append_axes("right", size="5%", pad=0.05)
+# plt.colorbar(im, cax=cax)
+# plt.show()
+
+# In this setting, with 6% loss in rank we have upto 14% deviations in pixel value deviations.
