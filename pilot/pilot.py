@@ -337,8 +337,8 @@ proj_mats_one_hot = gen_one_hot_projs(one_hot_mats,
 sk_lr = LinearRegression(fit_intercept=False, n_jobs=-1)
 
 # prepare X and y:
-# basically reshaping the input one_hot image matrix to (n_samples, n_features) = (NumAngs * DetLen, N * M)
-# and reshaping the projection matrix to (n_samples, n_targets) = (N*M, N*M)
+# basically reshaping the input one_hot projection matrix to (n_samples, n_features) = (N*M, NumAngs * DetLen)  <=== fixed
+# and reshaping the target image matrix to (n_samples, n_targets) = (N*M, N*M)
 def prepare_one_hot_Xy(proj_mats_one_hot, one_hot_mats, num_angs, det_sz):
     # validate
     N, M, NN, MM = one_hot_mats.shape
@@ -348,10 +348,11 @@ def prepare_one_hot_Xy(proj_mats_one_hot, one_hot_mats, num_angs, det_sz):
     proj_mat_size = proj_mats_one_hot.size
     exp_proj_size = N * M * num_angs * det_sz
     if (proj_mat_size != exp_proj_size):
-        raise Exception(f"Input `proj_mats_one_hot` should have the length {exp_proj_size}. Not with {(N, M, num_angs, det_sz)} => {proj_mat_len}.")
+        raise Exception(f"Input `proj_mats_one_hot` should have the length {exp_proj_size}. Not with {(N, M, num_angs, det_sz)} => {proj_mat_size}.")
 
     # transpose since we are switching the order to (n_samples, n_features)
-    X = proj_mats_one_hot.reshape(N * M, num_angs * det_sz).transpose() 
+    # X = proj_mats_one_hot.reshape(N * M, num_angs * det_sz).transpose()     # <===
+    X = proj_mats_one_hot.reshape(N * M, num_angs * det_sz)
     y = one_hot_mats.reshape(N * M, N * M)
     return X, y
 
@@ -426,9 +427,9 @@ max_err = np.amax(np.absolute(y - y_pred))
 rmse_train = mean_squared_error(y, y_pred, squared=False)
 mae_train = mean_absolute_error(y, y_pred)
 
-# print(f"Linear OLS fit Root Mean Square Error: {rmse_train:.4f}\nMean Absolute Error: {mae_train:.4f}")
-# # Root Mean Square Error: 0.0241
-# # Mean Absolute Error: 0.0180
+# print(f"{proj_sz} angles Linear OLS fit\nRoot Mean Square Error: {rmse_train:.4f}\nMean Absolute Error: {mae_train:.4f}")
+# # Root Mean Square Error: 0.0220
+# # Mean Absolute Error: 0.0143
 
 # Next, we will look into regularized methods for a better reconstruction performance
 
@@ -443,7 +444,7 @@ mae_train = mean_absolute_error(y, y_pred)
 # # LASSO fit:
 # # Root Mean Square Error: 0.0995
 # # Mean Absolute Error: 0.0198
-# # much larger RMSE error (10% vs 2.4% from OLS), similar MAE 
+# # much larger RMSE error (10% vs 2.2% from OLS)
 
 # # Ridge regression:
 # ridge = Ridge(alpha=1.0)
@@ -455,7 +456,7 @@ mae_train = mean_absolute_error(y, y_pred)
 # print(f"Ridge fit:\nRoot Mean Square Error: {rmse_ridge:.4f}\nMean Absolute Error: {mae_ridge:.4f}")
 # # Ridge fit:
 # # Root Mean Square Error: 0.0490
-# # Mean Absolute Error: 0.0259
+# # Mean Absolute Error: 0.0295
 # # Larger rmse (5%) and mae (2.6%) compared to OLS 
 
 # # Elastic Net regression:
@@ -467,7 +468,103 @@ mae_train = mean_absolute_error(y, y_pred)
 # mae_el_net = mean_absolute_error(y, y_el_net)
 # print(f"Elastic Net fit:\nRoot Mean Square Error: {rmse_el_net:.4f}\nMean Absolute Error: {mae_el_net:.4f}")
 # # Elastic Net fit:
-# # Root Mean Square Error: 0.0694
-# # Mean Absolute Error: 0.0237
+# # Root Mean Square Error: 0.0696
+# # Mean Absolute Error: 0.0257
 # # Similar to LASSO, poor rmse performance even with small alpha values
 
+
+# Now let's increase the number of projections, to see if we can get a full rank X matrix:
+
+proj_angs_12 = np.linspace(-90, +90, 12, endpoint=False)
+proj_sz_12 = len(proj_angs_12)
+# print(proj_angs_12)     # [-90. -75. -60. -45. -30. -15.   0.  15.  30.  45.  60.  75.]
+# print(proj_sz_12)          # 12
+
+# one_hot matrices are the same, let's generate one_hot projections for 12 angles:
+proj_mats_o_h_12 = gen_one_hot_projs(one_hot_mats,
+                                        proj_angs_12,
+                                        det_sz,
+                                        im_pix_sz=im_pix_sz,
+                                        det_elm_sz=det_elm_sz)
+
+# print("projections of the (2, 3) one-hot image:")
+# print(np.squeeze(proj_mats_o_h_12[2, 3]))
+# # [[0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
+# #  [0. 0. 0. 0. 0. 0. 0. 1. 0. 0.]]
+
+X, y = prepare_one_hot_Xy(proj_mats_o_h_12, one_hot_mats, proj_sz_12, det_sz)
+
+# print(f"X shape: {X.shape}, y shape: {y.shape}" )
+# # X shape: (100, 120), y shape: (100, 100)
+
+# X_rank = np.linalg.matrix_rank(X)
+# print(f"Rank of Training Matrix X: ==> {X_rank} <==\n\
+#     required number of rows for full recon: {N * M}\n\
+#     image matrix size {im_mat_sz}\n\
+#     projection angles: {proj_angs_12}\n\
+#     total number of projs: {proj_angs_12.size}")
+# # Rank of Training Matrix X: ==> 100 <==
+# #     required number of rows for full recon: 100
+# #     image matrix size (10, 10)
+# #     projection angles: [-90. -75. -60. -45. -30. -15.   0.  15.  30.  45.  60.  75.]
+# #     total number of projs: 12
+
+# now let's see if we can get a better reconstruction now that we have a full rank X
+sk_lr_12 = LinearRegression(fit_intercept=False, n_jobs=-1)
+
+sk_lr_12.fit(X, y)
+
+y_pred_12 = sk_lr_12.predict(X)
+
+# Looking at the root mean square error and mean absolute error:
+rmse_train_12 = mean_squared_error(y, y_pred_12, squared=False)
+mae_train_12 = mean_absolute_error(y, y_pred_12)
+
+# print(f"Linear OLS fit {proj_sz_12} angles\nRoot Mean Square Error: {rmse_train_12:.4f}\nMean Absolute Error: {mae_train_12:.4f}")
+# # Linear OLS fit Root Mean Square Error: 0.0000
+# # Mean Absolute Error: 0.0000
+# # Encouraging results
+
+# # Now let's plot the results:
+# # plot y, y_pred side by side
+# fig, axs = plt.subplots(nrows=1, ncols=2)
+# im0 = axs[0].imshow(y, cmap=cm.get_cmap("plasma"))
+# axs[0].set_title("y")
+# im1 = axs[1].imshow(y_pred_12, cmap=cm.get_cmap("plasma"))
+# axs[1].set_title("y_pred_12")
+# # create an axes on the right side of ax. The width of cax will be 5%
+# # of ax and the padding between cax and ax will be fixed at 0.05 inch.
+# divider = make_axes_locatable(axs[1])
+# cax = divider.append_axes("right", size="5%", pad=0.05)
+# plt.colorbar(im1, cax=cax)
+# plt.show()
+
+# # plot the error map
+# fig, ax = plt.subplots()
+# im = ax.imshow(y_pred_12 - y, cmap=cm.get_cmap("plasma"))
+# ax.set_title("Error: y_pred_12 - y")
+# divider = make_axes_locatable(ax)
+# cax = divider.append_axes("right", size="5%", pad=0.05)
+# plt.colorbar(im, cax=cax)
+# plt.show()
+
+# # plot sample reconstructed image i, j = (2, 3)
+# i, j = (2, 3)
+# fig, ax = plt.subplots()
+# im_recon_ij = y_pred_12.reshape(N, M, len(proj_angs), det_sz)[i, j]
+# im = ax.imshow(im_recon_ij, cmap=cm.get_cmap("plasma"))
+# ax.set_title(f"Error: one hot {(i, j)} reconstruction. {proj_sz_12} angles")
+# divider = make_axes_locatable(ax)
+# cax = divider.append_axes("right", size="5%", pad=0.05)
+# plt.colorbar(im, cax=cax)
+# plt.show()
