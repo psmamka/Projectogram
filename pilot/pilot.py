@@ -185,17 +185,22 @@ mat_det_idx_45 = mat_det_idx_y(mat_x_45, 10, 1.0, crop_outside=True)
 
 # Next, after finding the detector element indices, we calculate the actual projection 
 # values by summing values for detector indices in the index matrix
-
-def mat_det_proj(img_mat, mat_det_idx, det_sz):
+# For sparse matrices, it's much faster to sum over the nonzero elements.
+def mat_det_proj(img_mat, mat_det_idx, det_sz, is_sparse=False, sparse_idx=[]):
     det_out = np.zeros(det_sz)
     N, M = img_mat.shape
 
-    for u in range(N):
-        for v in range(M):
-            idx = mat_det_idx[u, v]
-            if (idx is not None) and (0 <= idx <= det_sz - 1):
-                det_out[idx] += img_mat[u, v]
-    
+    if not is_sparse:                   # for dense mats, sum over all elms
+        for u in range(N):
+            for v in range(M):
+                d_idx = mat_det_idx[u, v]
+                if (d_idx is not None) and (0 <= d_idx <= det_sz - 1):
+                    det_out[d_idx] += img_mat[u, v]
+    else:                               # for sparse mats, sum over nonzero indices:
+        for s_idx in sparse_idx:
+            d_idx = mat_det_idx[s_idx]  # detector elm index
+            det_out[d_idx] += img_mat[s_idx]
+
     return det_out
 
 
@@ -278,7 +283,7 @@ one_hot_mats = build_one_hot_mats(im_mat_sz)
 
 # Now let's generate projections for all the one-hot images
 # putting everything together here
-
+# here we will use sparseness of the one-hot matrices to generate projections
 def gen_one_hot_projs(one_hot_mats, proj_angs, det_sz, im_pix_sz=1.0, det_elm_sz=1.0):
     # validate and process inputs
     N, M, NN, MM = one_hot_mats.shape
@@ -301,7 +306,10 @@ def gen_one_hot_projs(one_hot_mats, proj_angs, det_sz, im_pix_sz=1.0, det_elm_sz
         # do the projection for all one-hot matrices
         for i in range(N):
             for j in range(M):
-                proj_mat_one_hot[i, j, th_idx] = mat_det_proj(one_hot_mats[i, j], mat_det_idx, det_sz)
+                proj_mat_one_hot[i, j, th_idx] = mat_det_proj(one_hot_mats[i, j],
+                                                                mat_det_idx, det_sz, 
+                                                                is_sparse=True,         # <===
+                                                                sparse_idx=[(i, j)])    # <===
 
     return proj_mat_one_hot
 
@@ -383,7 +391,7 @@ sk_lr.fit(X, y)
 # Test the model using original input:
 y_pred = sk_lr.predict(X)
 
-max_err = np.amax(np.absolute(y - y_pred))
+# max_err = np.amax(np.absolute(y - y_pred))
 # print(f"maximum error between y and y_pred: {max_err}")
 # # maximum error between y and y_pred: 0.14141845703125
 # # so we have errors of up to ~ 14% in reconstruction
@@ -530,10 +538,10 @@ y_pred_12 = sk_lr_12.predict(X)
 rmse_train_12 = mean_squared_error(y, y_pred_12, squared=False)
 mae_train_12 = mean_absolute_error(y, y_pred_12)
 
-# print(f"Linear OLS fit {proj_sz_12} angles\nRoot Mean Square Error: {rmse_train_12:.4f}\nMean Absolute Error: {mae_train_12:.4f}")
-# # Linear OLS fit Root Mean Square Error: 0.0000
-# # Mean Absolute Error: 0.0000
-# # Encouraging results
+print(f"Linear OLS fit {proj_sz_12} angles\nRoot Mean Square Error: {rmse_train_12:.4f}\nMean Absolute Error: {mae_train_12:.4f}")
+# Linear OLS fit Root Mean Square Error: 0.0000
+# Mean Absolute Error: 0.0000
+# Encouraging results
 
 # # Now let's plot the results:
 # # plot y, y_pred side by side
@@ -568,3 +576,74 @@ mae_train_12 = mean_absolute_error(y, y_pred_12)
 # cax = divider.append_axes("right", size="5%", pad=0.05)
 # plt.colorbar(im, cax=cax)
 # plt.show()
+
+
+# Now let's move to a larger matrix. Let's see how the linear system performs for
+# a 100x100 matrix. Takes too long. Projections for 50x50 takes a couple minutes. 100x100 would be hours
+# The Pipeline:
+# (1) Define the 100x100 image matrix
+im_pix_sz = 1.0                     # physical size of a pixel. Arbitrary units
+im_mat_sz = (100, 100)                # matrix size: N, M
+N, M = im_mat_sz                    # for convenient use
+
+# (2) Define the detector array (1D)
+det_elm_sz = 1.0                    # physical size of the detector elm. AU
+det_sz = 100
+
+# (3) Define the angles of projection
+proj_sz = 120
+proj_angs = np.linspace(-90, +90, proj_sz, endpoint=False)
+print("parset initialization done.")
+
+# (4) Build coordinate matrices:
+mat_x_0, mat_y_0 = gen_mat_x_mat_y(im_mat_sz, 
+                                    im_pix_sz)
+print("building coord matrices done.")
+
+# (5) Build one-hot matrices (dense)
+one_hot_mats = build_one_hot_mats(im_mat_sz)
+print("building o_h matrices done.")
+
+# (6) one-hot projection matrices
+proj_mats_one_hot = gen_one_hot_projs(one_hot_mats,
+                                        proj_angs,
+                                        det_sz,
+                                        im_pix_sz=im_pix_sz,
+                                        det_elm_sz=det_elm_sz)
+print("building o_h projections done.")
+
+# (7) Prepare Features and Targets (Xy)
+X, y = prepare_one_hot_Xy(proj_mats_one_hot, 
+                            one_hot_mats, 
+                            proj_sz, 
+                            det_sz)
+print("X-y preparation done.")
+
+# (8) Calculate the rank of features:
+X_rank = np.linalg.matrix_rank(X)
+print(f"Rank of Training Matrix X: ==> {X_rank} <==\n\
+    required number of rows for full recon: {N * M}")
+# Rank of Training Matrix X: ==> 10000 <==
+#     required number of rows for full recon: 10000
+# Note: Rank calculation took 3 minutes for the 100x100 matrix
+
+# (9) Instantiate Linear Regressor
+sk_lr = LinearRegression(fit_intercept=False, n_jobs=-1)
+
+# (10) Fit the regressor:
+sk_lr.fit(X, y)
+
+# Evaluation Phase
+# (11) Predict from one-hot projections:
+y_pred = sk_lr.predict(X)
+
+# (12) Calculate errors, RMS and MAE:
+rmse_train = mean_squared_error(y, y_pred, squared=False)
+mae_train = mean_absolute_error(y, y_pred)
+
+print(f"Linear OLS Fit:\n{proj_sz} angles, {im_mat_sz} matrix, {det_sz} detector size\nRoot Mean Square Error: {rmse_train:.4f}\nMean Absolute Error: {mae_train:.4f}")
+# Linear OLS Fit:
+# 120 angles, (100, 100) matrix, 100 detector size
+# Root Mean Square Error: 0.0000
+# Mean Absolute Error: 0.0000
+# Note: OLS fit for 100x100 reconstruction too 11 minutes
