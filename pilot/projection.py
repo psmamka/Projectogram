@@ -65,7 +65,7 @@ class Projection2D:
 
         return mat_x_th, mat_y_th
 
-    # Map the image matrix to detector elements using physical coordinates: matrix-detector-index (mat_det_idx)
+    # Map the image matrix to detector elements usng physicial coordinates: matrix-detector-index (mat_det_idx)
     # 
     # First we define a simple "nearest-element-center" projection rule:
     # (1) Each pixel representative (center) is projected vertically on a detector plane below
@@ -102,5 +102,26 @@ class Projection2D:
             trans2 = lambda z: z   # do nothing
 
         return np.array([trans2(trans1((z))) for z in mat_det_idx.ravel()]).reshape(mat_x.shape)
+    
+    # Projection for a single angle based on the detector element indices
+    # For sparse matrices, it's much faster to sum over the nonzero elements.
+    def mat_det_proj(self, img_mat, mat_det_idx, is_sparse=False, sparse_idx=[]):
+        det_out = np.zeros(self.det_sz)
+        N, M = img_mat.shape
+
+        if not is_sparse:                   # for dense mats, sum over all elms
+            for u in range(N):
+                for v in range(M):
+                    d_idx = mat_det_idx[u, v]
+                    if (d_idx is not None) and (0 <= d_idx <= self.det_sz - 1):
+                        det_out[d_idx] += img_mat[u, v]
+        else:                               # for sparse mats, sum over nonzero indices:
+            for s_idx in sparse_idx:
+                d_idx = mat_det_idx[s_idx]  # detector elm index
+                det_out[d_idx] += img_mat[s_idx]
+
+        return det_out
+        
+
 
 
