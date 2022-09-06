@@ -7,7 +7,8 @@ class Projection2D:
     # im_mat_sh is the (N, M) 2-tuple for the shape of the image matrix
     # det_len is the length of the detector array
     # _ph_sz suffixes refer to physical length in chosen units
-    def __init__(self, im_mat_sh, det_len, pix_ph_sz=1.0, det_elm_ph_sz=1.0):
+
+    def __init__(self, im_mat_sh, det_len, pix_ph_sz=1.0, det_elm_ph_sz=1.0, proj_angs=[0.]):
         self.im_mat_sh = im_mat_sh
         self.N, self.M = im_mat_sh      # for convenience N rows, M columns
         self.im_mat = np.zeros(im_mat_sh)
@@ -19,6 +20,10 @@ class Projection2D:
 
         # original physical coordinates for the entire matrix before any rotation
         self.mat_x_0, self.mat_y_0 = self.generate_x_y_mats()
+
+        # projection angles
+        self.proj_angs = proj_angs
+        self.proj_sz = len(proj_angs)
 
     # for X, Y axes passing through the image center, the center locations (x, y) of
     # a pixel in the (u, v) row/column is given by:
@@ -121,7 +126,23 @@ class Projection2D:
                 det_out[d_idx] += img_mat[s_idx]
 
         return det_out
-        
 
+    # Projection of a single image matrix along all angles
+    # We won't use this for generating one-pixel projections, since it is more efficient to rotate
+    # once and project for all the pixels
+    def single_mat_all_ang_proj(self, img_mat, is_sparse=False, sparse_idx=[]):
+        # Define the projection matrix (2D)
+        proj_mat = np.zeros((self.proj_sz, self.det_len))
 
+        # run projection for all angles:
+        for t_idx, theta in enumerate(self.proj_angs):
+            # -theta since matrix is rotated opposite w.r.t the detector
+            mat_x_th, _ = self.rotate_xy(-1 * theta)
+            mat_det_idx = self.mat_det_idx_y(mat_x_th, crop_outside=True)
+            proj_mat[t_idx] = self.mat_det_proj(img_mat, 
+                                                mat_det_idx, 
+                                                is_sparse=is_sparse, 
+                                                sparse_idx=sparse_idx)
+
+        return proj_mat
 
