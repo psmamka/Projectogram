@@ -146,3 +146,41 @@ class Projection2D:
 
         return proj_mat
 
+    # Single pixel mats for creating projections and training the network
+    # Here we will be using just a dense representation. At some point, we will be 
+    # switching to sparse representations
+    # retuens a 4D matrix, where the i,j component is a matrix with index i,j eq to one, rest zero.
+    # A shortcut way of building it is to reshape the identity matrix of size NM by NM
+    def build_single_pixel_mats_dense(self):
+        N, M = self.im_mat_sh
+        single_pixel_2D = np.eye(N * M)
+        single_pixel_mats = single_pixel_2D.reshape((N, M, N, M))
+
+        return single_pixel_mats
+
+    # Now let's generate projections for all the single_pixel images
+    # here we will use sparseness to generate projections
+    def gen_single_pixel_projs(self, single_pixel_mats):
+        # validate and process inputs
+        N, M, NN, MM = single_pixel_mats.shape
+        if (N != NN or M != MM):
+            raise Exception(f"Input `one_hot_mats` should be of shape (A B A B). We have: {single_pixel_mats.shape}")
+        angles_sz = len(self.proj_angs)
+
+        # initialize the 4D projection matrix
+        proj_single_pixel_mat = np.zeros((N, M, angles_sz, self.det_len))
+
+        # for each angle theta, get the mat_x_th for -theta rotation
+        # then calculate projections for all one hot matrices for that theta
+        for (th_idx, theta) in enumerate(self.proj_angs):
+            mat_x_th, _ = self.rotate_xy(-1 * theta)    # rotate by -theta
+            mat_det_idx = self.mat_det_idx_y(mat_x_th, crop_outside=True)    # generate index mat
+            # do the projection for all one-hot matrices
+            for i in range(N):
+                for j in range(M):
+                    proj_single_pixel_mat[i, j, th_idx] = self.mat_det_proj(single_pixel_mats[i, j],
+                                                                            mat_det_idx,
+                                                                            is_sparse=True,     
+                                                                            sparse_idx=[(i, j)])
+
+        return proj_single_pixel_mat
