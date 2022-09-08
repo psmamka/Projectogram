@@ -7,8 +7,10 @@ class Projection2D:
     # im_mat_sh is the (N, M) 2-tuple for the shape of the image matrix
     # det_len is the length of the detector array
     # _ph_sz suffixes refer to physical length in chosen units
+    # det_ph_offs refers to detector offset in the x direction in physical units
+    # proj_angs is the array of all the projection angles
 
-    def __init__(self, im_mat_sh, det_len, pix_ph_sz=1.0, det_elm_ph_sz=1.0, proj_angs=[0.]):
+    def __init__(self, im_mat_sh, det_len, pix_ph_sz=1.0, det_elm_ph_sz=1.0, det_ph_offs=0., proj_angs=[0.]):
         self.im_mat_sh = im_mat_sh
         self.N, self.M = im_mat_sh      # for convenience N rows, M columns
         self.im_mat = np.zeros(im_mat_sh)
@@ -17,6 +19,8 @@ class Projection2D:
 
         self.pix_ph_sz = pix_ph_sz
         self.det_elm_ph_sz = det_elm_ph_sz
+
+        self.det_ph_offs = det_ph_offs
 
         # original physical coordinates for the entire matrix before any rotation
         self.mat_x_0, self.mat_y_0 = self.generate_x_y_mats()
@@ -36,7 +40,7 @@ class Projection2D:
 
         return (self.im_pix_size * x, self.im_pix_size * y)
 
-    # generateoriginal x and y physical coordinates for the entire image matrix, store in mat_x, mat_y
+    # generate original x and y physical coordinates for the entire image matrix, store in mat_x, mat_y
     def generate_x_y_mats(self):
         mat_x = np.zeros(self.N, self.M)
         mat_y = np.zeros(self.N, self.M)
@@ -70,19 +74,37 @@ class Projection2D:
 
         return mat_x_th, mat_y_th
 
-    # Map the image matrix to detector elements usng physicial coordinates: matrix-detector-index (mat_det_idx)
+    # Map the image matrix to detector elements usng physical coordinates: matrix-detector-index (mat_det_idx)
     # 
     # First we define a simple "nearest-element-center" projection rule:
     # (1) Each pixel representative (center) is projected vertically on a detector plane below
     # (2) The detector element assigned to the pixel is the one where the pixel center lands
-    # (3) Later, we can try other forms of dividing pixel information amonf nearby elements
+    # (3) Later, we can try other forms of dividing pixel information among nearby elements
     # (4) Since we are projecting along the y-axis, we only need the x coords.
 
     # First, a function to assign detector element index to each matrix element:
-    # General formula for assigning detector element index for an matrix elm with xcoord:
+    # General formula for assigning detector element index for a matrix elm with x coord:
 
-    # k_x = floor(x/d) + det_sz/2                           : for det_sz even
-    # k_x = floor(x/d - 0.5) + (det_sz + 1)/2               : for det_sz odd
+    # k_x = floor(x/d) + det_sz/2                           : for det len even
+    # k_x = floor(x/d - 0.5) + (det_sz + 1)/2               : for det len odd
+
+    # (5) The above formula holds for the case where there is no detector offset: the image matrix 
+    # and the detector are centered on the y-axis.
+    # When detector has some physical offset along x-axis, det_off: 
+
+    # k_x = floor((x - det_ph_offs)/d) + det_sz/2                           : for det len even
+    # k_x = floor((x - det_ph_offs)/d - 0.5) + (det_sz + 1)/2               : for det len odd
+
+    #     Image:
+    # 		 _ _ _ _ _
+    # 		|_|_|_|_|_|
+    # 		|_|_|_|_|_|
+    # 		|_|_|_|_|_|
+    # 		|_|_|_|_|_|
+    # 		|_|_|_|_|_|
+    #       
+    # 			|_|_|_|_|_|	 : detector with some positive x offset (det_ph_offs)
+
 
     # inputs:
     # mat_x: physical x coords of each mtrix elm,
@@ -95,9 +117,9 @@ class Projection2D:
         mat_det_idx = np.zeros(mat_x.shape)
         
         if self.det_len % 2 == 0:
-            mat_det_idx = np.floor(mat_x / self.det_elm_ph_sz) + self.det_len / 2
+            mat_det_idx = np.floor((mat_x - self.det_ph_offs) / self.det_elm_ph_sz) + self.det_len / 2
         else:
-            mat_det_idx = np.floor(mat_x / self.det_elm_ph_sz - 0.5) + (self.det_len + 1) / 2
+            mat_det_idx = np.floor((mat_x - self.det_ph_offs) / self.det_elm_ph_sz - 0.5) + (self.det_len + 1) / 2
 
         # post processing of projection values:
         trans1 = lambda z: np.round(z).astype("int")
