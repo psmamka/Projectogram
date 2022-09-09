@@ -10,7 +10,7 @@ class Projection2D:
     # det_ph_offs refers to detector offset in the x direction in physical units
     # proj_angs is the array of all the projection angles
 
-    def __init__(self, im_mat_sh, det_len, pix_ph_sz=1.0, det_elm_ph_sz=1.0, det_ph_offs=0., proj_angs=[0.]):
+    def __init__(self, im_mat_sh=(100, 100), det_len=100, pix_ph_sz=1.0, det_elm_ph_sz=1.0, det_ph_offs=0., proj_angs=[0.]):
         self.im_mat_sh = im_mat_sh
         self.N, self.M = im_mat_sh      # for convenience N rows, M columns
         self.im_mat = np.zeros(im_mat_sh)
@@ -42,8 +42,9 @@ class Projection2D:
 
     # generate original x and y physical coordinates for the entire image matrix, store in mat_x, mat_y
     def generate_x_y_mats(self):
-        mat_x = np.zeros(self.N, self.M)
-        mat_y = np.zeros(self.N, self.M)
+        print((self.N, self.M))
+        mat_x = np.zeros((self.N, self.M))
+        mat_y = np.zeros((self.N, self.M))
 
         for u in range(self.N):
             for v in range(self.M):
@@ -69,8 +70,8 @@ class Projection2D:
         cos_th = np.cos(theta * np.pi / 180)
         sin_th = np.sin(theta * np.pi / 180)
 
-        mat_x_th = self.mat_x * cos_th - self.mat_y * sin_th
-        mat_y_th = self.mat_x * sin_th + self.mat_y * cos_th
+        mat_x_th = self.mat_x_0 * cos_th - self.mat_y_0 * sin_th
+        mat_y_th = self.mat_x_0 * sin_th + self.mat_y_0 * cos_th
 
         return mat_x_th, mat_y_th
 
@@ -133,14 +134,14 @@ class Projection2D:
     # Projection for a single angle based on the detector element indices
     # For sparse matrices, it's much faster to sum over the nonzero elements.
     def mat_det_proj(self, img_mat, mat_det_idx, is_sparse=False, sparse_idx=[]):
-        det_out = np.zeros(self.det_sz)
+        det_out = np.zeros(self.det_len)
         N, M = img_mat.shape
 
         if not is_sparse:                   # for dense mats, sum over all elms
             for u in range(N):
                 for v in range(M):
                     d_idx = mat_det_idx[u, v]
-                    if (d_idx is not None) and (0 <= d_idx <= self.det_sz - 1):
+                    if (d_idx is not None) and (0 <= d_idx <= self.det_len - 1):
                         det_out[d_idx] += img_mat[u, v]
         else:                               # for sparse mats, sum over nonzero indices:
             for s_idx in sparse_idx:
