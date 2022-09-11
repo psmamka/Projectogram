@@ -199,7 +199,8 @@ def mat_det_proj(img_mat, mat_det_idx, det_sz, is_sparse=False, sparse_idx=[]):
     else:                               # for sparse mats, sum over nonzero indices:
         for s_idx in sparse_idx:
             d_idx = mat_det_idx[s_idx]  # detector elm index
-            det_out[d_idx] += img_mat[s_idx]
+            if (d_idx is not None) and (0 <= d_idx <= det_sz - 1):
+                det_out[d_idx] += img_mat[s_idx]
 
     return det_out
 
