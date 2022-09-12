@@ -1,3 +1,4 @@
+from statistics import linear_regression
 import numpy as np
 from scipy import linalg
 from sklearn.linear_model import LinearRegression
@@ -49,8 +50,31 @@ class Inversion2D:
 
         return X, y
         
-    
+    # Finding the rank of the projectogram, or the feature-space in the ML lingo
+    def get_projectogram_rank(self, verbose=False):
+        X, _ = self.prepare_single_pixel_Xy()
 
+        X_rank = np.linalg.matrix_rank(X)
+
+        if verbose:
+            print(f"Image Shape: {self.im_mat_sh}, Image Pixels: {X.shape[0]}, Feature Rank: {X_rank}, Null Space: {X.shape[0] - X_rank}")
+
+        return X_rank
+    
+    # Use sk-learn (or any OLS library) to calculate parameters of a linear model
+    # fit_intercept is False, since we don't expect any bias in detector output (w/ or w/o noise)
+    # n_jobs of -1 allows the machine to decide the number of cpu cores used for training
+    def gen_train_lin_reg_model(self):
+
+        self.linear_model = LinearRegression(fit_intercept=False, n_jobs=-1)
+
+        X, y = self.prepare_single_pixel_Xy()
+
+        self.linear_model.fit(X, y)
+
+        return self.linear_model
+
+    
         
 
 
