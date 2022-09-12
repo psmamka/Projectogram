@@ -27,7 +27,7 @@ class Projection2D:
 
         # projection angles
         self.proj_angs = proj_angs
-        self.proj_sz = len(proj_angs)
+        self.proj_ang_sz = len(proj_angs)
 
     # for X, Y axes passing through the image center, the center locations (x, y) of
     # a pixel in the (u, v) row/column is given by:
@@ -156,7 +156,7 @@ class Projection2D:
     # once and project for all the pixels
     def single_mat_all_ang_proj(self, img_mat, is_sparse=False, sparse_idx=[]):
         # Define the projection matrix (2D)
-        proj_mat = np.zeros((self.proj_sz, self.det_len))
+        proj_mat = np.zeros((self.proj_ang_sz, self.det_len))
 
         # run projection for all angles:
         for t_idx, theta in enumerate(self.proj_angs):
@@ -184,6 +184,7 @@ class Projection2D:
 
     # Now let's generate projections for all the single_pixel images
     # here we will use sparseness to generate projections
+    # the result is a 4D matrix: N x M x Angs x DetLen 
     def gen_single_pixel_projs(self, single_pixel_mats):
         # validate and process inputs
         N, M, NN, MM = single_pixel_mats.shape

@@ -1,6 +1,5 @@
 # The Pilot Project
 
-# from distutils.command.build import build
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
