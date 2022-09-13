@@ -120,7 +120,7 @@ class Inversion2D:
             self.train_lin_reg_model()
 
 
-        X = proj_mat.reshape(-1, 1)
+        X = proj_mat.reshape(1, -1)
         y_pred = self.linear_model.predict(X)
 
         return y_pred.reshape(self.N, self.M)
