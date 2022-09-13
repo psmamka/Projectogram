@@ -42,7 +42,7 @@ class Projection2D:
 
     # generate original x and y physical coordinates for the entire image matrix, store in mat_x, mat_y
     def generate_x_y_mats(self):
-        print((self.N, self.M))
+        # print((self.N, self.M))
         mat_x = np.zeros((self.N, self.M))
         mat_y = np.zeros((self.N, self.M))
 

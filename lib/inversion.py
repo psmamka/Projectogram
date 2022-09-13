@@ -18,6 +18,8 @@ class Inversion2D:
                         pix_ph_sz=1.0, 
                         det_elm_ph_sz=1.0, 
                         det_ph_offs=0.):
+
+        self.pg_sh = projectogram.shape
         # input verification: projectogram should have the size (N, M, Angs, det_len)
         if (self.pg_sh[0] != im_mat_sh[0] or \
             self.pg_sh[1] != im_mat_sh[1] or \
@@ -29,7 +31,6 @@ class Inversion2D:
         self.projectoram = projectogram
         self.single_pixel_mats = single_pixel_mats
 
-        self.pg_sh = projectogram.shape
         self.im_mat_sh = im_mat_sh
         self.N, self.M = im_mat_sh      # for convenience N rows, M columns (reverse order intended)
         self.proj_angs = proj_angs
@@ -59,7 +60,7 @@ class Inversion2D:
         X_rank = np.linalg.matrix_rank(X)
 
         if verbose:
-            print(f"Image Shape: {self.im_mat_sh}, Image Pixels: {X.shape[0]}, Feature Rank: {X_rank}, Null Space: {X.shape[0] - X_rank}")
+            print(f"Image Shape: {self.im_mat_sh}, Image Pixels: {X.shape[0]}, Features Rank: {X_rank}, Null Space: {X.shape[0] - X_rank}")
 
         return X_rank
     
