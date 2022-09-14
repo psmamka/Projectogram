@@ -73,10 +73,10 @@ def instance_20(plot_results=True):
 
 
 # simple projection and reconstruction of a 20x20 pacman
-def simple_20(plot_proj=True, plot_recon=True):
+def simple_20(num_angs=20, plot_proj=True, plot_recon=True):
     pacman_20 = pacman_mask(20, (9.5,9.5), 7, direc=0, ang=60)
 
-    proj_angs = np.linspace(start=-90, stop=90, num=20, endpoint=False)
+    proj_angs = np.linspace(start=-90, stop=90, num=num_angs, endpoint=False)
     im_mat_sh = (20, 20)
     det_len = 20
     pix_ph_sz = 1.0
@@ -110,6 +110,9 @@ def simple_20(plot_proj=True, plot_recon=True):
                                 det_elm_ph_sz=det_elm_ph_sz, 
                                 det_ph_offs=det_ph_offs)
 
+    rank_20 = inverse_20.get_projectogram_rank(verbose=True)
+    # num_angs=21: Image Shape: (20, 20), Image Pixels: 400, Features Rank: 399, Null Space: 1
+
     inverse_20.train_lin_reg_model()
 
     recon_20 = inverse_20.general_projection_reconstruction(proj_mat)
@@ -125,7 +128,7 @@ def simple_20(plot_proj=True, plot_recon=True):
         plt.colorbar(im0, cax=cax0)
 
         im1 = axs[1].imshow(recon_20, cmap=cm.get_cmap("plasma"))
-        axs[1].set_title("pacman_20: Reconstructed with rank 390")
+        axs[1].set_title(f"pacman_20: Reconstructed with rank {rank_20}")
         divider1 = make_axes_locatable(axs[1])
         cax1 = divider1.append_axes("right", size="5%", pad=0.05)
         plt.colorbar(im1, cax=cax1)
@@ -140,4 +143,4 @@ def simple_20(plot_proj=True, plot_recon=True):
 
 
 # instance_20(plot_results=True)
-simple_20(plot_proj=True, plot_recon=True)
+simple_20(num_angs=21, plot_proj=True, plot_recon=True)
