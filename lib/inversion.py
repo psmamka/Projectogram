@@ -41,7 +41,10 @@ class Inversion2D:
         self.det_elm_ph_sz = det_elm_ph_sz
         self.det_ph_offs = det_ph_offs
 
-        self.linear_model = None
+        self.linear_model = None    # linear network from sklearn
+
+        self.pseudoinv = None       # pseudo-inverse from scipy.linalg
+        self.pseudorank = None
 
     # Use the X (features) and y (labels) terminology from machine learning
     # Here features X are the single pixel projections, or the projectogram
@@ -125,4 +128,39 @@ class Inversion2D:
 
         return y_pred.reshape(self.N, self.M)
 
+
+    # The pseudo-inverse method, using scipy.linalg's SVD-based generalized inverse technique
+    # The idea is that the projectogram's (pseudo-) inverse can be used to reconstruct images:
+    #       Projections = Projectogram * Image + epsilon
+    # ===> (least squares)
+    #       Image ~= Projectogram_ps_inv * Projections
+    # Where pseudo-inverse of A is:
+    #       A_ps_inv = (A^H * A)^-1 * A^H       (A^H being conjugate transpose of A) 
+    def get_projectrogram_psudoinv(self, verbose=True):
+        X, _ = self.prepare_single_pixel_Xy()
+
+        psinv, psrank = linalg.pinv(X, atol=None, rtol=None, return_rank=True, check_finite=True)
+        self.pseudoinv = psinv
+        self.pseudorank = psrank
+
+        if (verbose):
+            print(f"Pseudo-inverse rank: {psrank}, image pixels: {X.shape[0]}")
+
+        return psinv, psrank
     
+
+    # Reconstruction of an image from projections matrix using the pseudoinverse method
+    # projections are obtained in accordance with the __init__ parameters self.proj_angs_sz, self.det_len
+    def general_projection_recon_pseudoinv(self, proj_mat):
+        # validate shape
+        if proj_mat.shape != (self.proj_angs_sz, self.det_len):
+            raise Exception(f"Projection matrix shape {proj_mat.shape} not compatible with angles length {self.proj_angs_sz}, detector length {self.det_len}")
+        
+        # validate that the peudo-inverse is already calculated
+        if self.pseudoinv is None:
+            self.get_projectrogram_psudoinv()
+
+        X = proj_mat.reshape(-1, 1)
+        y_pred = (self.pseudoinv.T).dot(X)    # matrix multiplicaltion
+
+        return y_pred.reshape(self.N, self.M)
