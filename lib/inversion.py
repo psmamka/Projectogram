@@ -122,7 +122,6 @@ class Inversion2D:
         if self.linear_model is None:
             self.train_lin_reg_model()
 
-
         X = proj_mat.reshape(1, -1)
         y_pred = self.linear_model.predict(X)
 
@@ -136,7 +135,7 @@ class Inversion2D:
     #       Image ~= Projectogram_ps_inv * Projections
     # Where pseudo-inverse of A is:
     #       A_ps_inv = (A^H * A)^-1 * A^H       (A^H being conjugate transpose of A) 
-    def get_projectrogram_psudoinv(self, verbose=True):
+    def get_projectrogram_pseudoinv(self, verbose=True):
         X, _ = self.prepare_single_pixel_Xy()
 
         psinv, psrank = linalg.pinv(X, atol=None, rtol=None, return_rank=True, check_finite=True)
@@ -149,6 +148,19 @@ class Inversion2D:
         return psinv, psrank
     
 
+    # Pseudo-inverse reconstruction of single-pixel images from the projectogram
+    def single_pixel_recon_pseudoinv(self):
+
+        # validate that the peudo-inverse is already calculated
+        if self.pseudoinv is None:
+            self.get_projectrogram_pseudoinv()
+        
+        X, _ = self.prepare_single_pixel_Xy()
+        sinpix_recon_all = (self.pseudoinv.T).dot(X.T)    # matrix multiplicaltion
+
+        return sinpix_recon_all
+
+
     # Reconstruction of an image from projections matrix using the pseudoinverse method
     # projections are obtained in accordance with the __init__ parameters self.proj_angs_sz, self.det_len
     def general_projection_recon_pseudoinv(self, proj_mat):
@@ -158,7 +170,7 @@ class Inversion2D:
         
         # validate that the peudo-inverse is already calculated
         if self.pseudoinv is None:
-            self.get_projectrogram_psudoinv()
+            self.get_projectrogram_pseudoinv()
 
         X = proj_mat.reshape(-1, 1)
         y_pred = (self.pseudoinv.T).dot(X)    # matrix multiplicaltion
