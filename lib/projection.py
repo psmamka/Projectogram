@@ -185,7 +185,7 @@ class Projection2D:
     # Now let's generate projections for all the single_pixel images
     # here we will use sparseness to generate projections
     # the result is a 4D matrix: N x M x Angs x DetLen 
-    def gen_single_pixel_projs(self, single_pixel_mats):
+    def gen_single_pixel_projs(self, single_pixel_mats, is_sparse=True):
         # validate and process inputs
         N, M, NN, MM = single_pixel_mats.shape
         if (N != NN or M != MM):
@@ -205,7 +205,7 @@ class Projection2D:
                 for j in range(M):
                     proj_single_pixel_mat[i, j, th_idx] = self.mat_det_proj(single_pixel_mats[i, j],
                                                                             mat_det_idx,
-                                                                            is_sparse=True,     
+                                                                            is_sparse=is_sparse,     
                                                                             sparse_idx=[(i, j)])
 
         return proj_single_pixel_mat
