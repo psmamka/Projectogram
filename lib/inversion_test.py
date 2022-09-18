@@ -313,4 +313,6 @@ def pseudoinv_pacman_20(num_angs=20, plot_proj=True, plot_recon=True):
 # train_instance_20(plot_sinpix=True, plot_projgram=True)
 # train_pacman_20(num_angs=20, plot_proj=False, plot_recon=True)
 pseudoinv_instance_20(num_angs=10, plot_sinpix=True, plot_projgram=True)
+# pseudoinv_instance_20(num_angs=4, plot_sinpix=True, plot_projgram=True)
+
 # pseudoinv_pacman_20(num_angs=10, plot_proj=True, plot_recon=True)
