@@ -62,6 +62,7 @@ def rectangle_mask(mat_sz, rect_sz, cent=None, ul_corner=None):
     ul_corner: alternatively, we can give the location of the upper left corner of the rectangle in (u_ul, v_ul) indices
     """
     if isinstance(mat_sz, int): mat_sz = (mat_sz, mat_sz)
+    if isinstance(rect_sz, int): rect_sz = (rect_sz, rect_sz)
 
     rows, cols = mat_sz
     rect_rows, rect_cols = rect_sz
