@@ -28,7 +28,7 @@ from sklearn.metrics import mean_absolute_error
 
 # Steps:
 # () generate phantom projections
-# () select rows that have non-zero min-product with the phantom projection
+# () select rows that have non-zero min-product/masked-min-product with the phantom projection
     # - min-product is defined (for now) as follows:
     # - select non-zeros elements of the p-gram row
     # - pointwise multiply by the same elements from the phantom projection (sinogram) to form a pixel-array
@@ -56,7 +56,7 @@ pix_ph_sz = 1.0
 det_elm_ph_sz = 1.0
 det_ph_offs = 0.0
 
-rect_ph = rectangle_mask(mat_sz=im_mat_sh, rect_sz=1)
+rect_ph = rectangle_mask(mat_sz=im_mat_sh, rect_sz=2, ul_corner=(4, 4))
 
 proj_20 = Projection2D(im_mat_sh=im_mat_sh,
                         det_len=det_len, 
@@ -69,19 +69,42 @@ single_pix_mats = proj_20.build_single_pixel_mats_dense()
 proj_single_pix = proj_20.gen_single_pixel_projs(single_pixel_mats=single_pix_mats)
 proj_mat = proj_20.single_mat_all_ang_proj(rect_ph, is_sparse=False)
 
-# # plotting single-pixel
-# # first pix, its projections
-# fig, axs = plt.subplots(nrows=1, ncols=2)
-# fig.set_size_inches(12, 6)
-# im0 = axs[0].imshow(single_pix_mats[0, 0, :, :], cmap=cm.get_cmap("plasma"))
-# im1 = axs[1].imshow(proj_single_pix[0, 0, :, :], cmap=cm.get_cmap("plasma"))
-# print(proj_single_pix[0, 0, :, :])  # problem with cropping
-# plt.show()
+
+def plot_multiple_images(im_arr, nrows=1, ncols=2, fig_size=(12, 6), col_map="plasma", show_cbar=True):
+    sz = len(im_arr)
+    if (nrows * ncols != sz): nrows, ncols = (1, sz) 
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols)
+    fig.set_size_inches(fig_size)
+    plots, ims, cax = (im_arr, [None] * sz, [None] * sz)
+    for ind in range(sz):
+        ims[ind] = axs[ind].imshow(plots[ind], cmap=cm.get_cmap(col_map))
+        divider = make_axes_locatable(axs[ind])
+        if show_cbar:
+            cax[ind] = divider.append_axes("right", size="5%", pad=0.05)
+            plt.colorbar(ims[ind], cax=cax[ind])
+    plt.show()
+
+# plotting single-pixels + projectogram
+num_pix = im_mat_sh[0] * im_mat_sh[1]
+num_elms = num_angs * det_len
+plot_multiple_images([single_pix_mats.reshape(num_pix, num_pix), proj_single_pix.reshape(num_pix, num_elms)])
 
 # plotting phantom projections
-fig, axs = plt.subplots(nrows=1, ncols=2)
-fig.set_size_inches(12, 6)
-im0 = axs[0].imshow(rect_ph, cmap=cm.get_cmap("plasma"))
-im1 = axs[1].imshow(proj_mat, cmap=cm.get_cmap("plasma"))
-plt.show()
+# plot_multiple_images([rect_ph, proj_mat], col_map="ocean")
+
+
+
+# now we go over pixels looking at masked-min-product with the phantom projection
+# select the ones with non-zero masked min prod
+pix_prod_list = []
+
+# simple looping for now. refactor later
+for i in range(im_mat_sh[0]):
+    for j in range(im_mat_sh[1]):
+        masked_idx = proj_single_pix[i, j] > 0
+        prod_arr = proj_single_pix[i, j, masked_idx] * proj_mat[masked_idx]
+        # if min(prod_arr) > 0: print(i, j, min(prod_arr))
+        if min(prod_arr) > 0: pix_prod_list.append((i, j, min(prod_arr)))
+
+print(pix_prod_list)
 
