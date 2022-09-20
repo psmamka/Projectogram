@@ -9,9 +9,9 @@ import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-def sparse_50(mat_sz=(50, 50), num_angs=5, inv_tech="ps-inv", plot_proj=True, plot_recon=True):
+def sparse_50(mat_sz=(50, 50), num_angs=5, phant_sz=4, inv_tech="ps-inv", plot_proj=True, plot_recon=True):
     # phantom
-    rect_ph = rectangle_mask(mat_sz=mat_sz, rect_sz=4)
+    rect_ph = rectangle_mask(mat_sz = mat_sz, rect_sz = phant_sz)
     
     # par-set:
     proj_angs = np.linspace(start=-90, stop=90, num=num_angs, endpoint=False)
@@ -81,6 +81,8 @@ def sparse_50(mat_sz=(50, 50), num_angs=5, inv_tech="ps-inv", plot_proj=True, pl
     return
 
 
-sparse_50(mat_sz=(50, 50), num_angs=5, inv_tech="lin-reg", plot_proj=False, plot_recon=True) # inv_tech: "ps-inv" | "lin-reg"
+# sparse_50(mat_sz=(50, 50), num_angs=5, inv_tech="lin-reg", plot_proj=False, plot_recon=True) # inv_tech: "ps-inv" | "lin-reg"
 # Pseudo-inverse rank: 250, image pixels: 2500
 # Extreme streaking effects, for both pseudo-inv and lin-reg network
+
+sparse_50(mat_sz=(25, 25), num_angs=3, phant_sz=2, inv_tech="ps-inv", plot_proj=False, plot_recon=True) # inv_tech: "ps-inv" | "lin-reg"
