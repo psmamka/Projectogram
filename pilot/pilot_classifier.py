@@ -2,6 +2,7 @@ import sys
 sys.path.append('../lib')
 
 import numpy as np
+from scipy import linalg
 
 try:
     from ..lib.projection import Projection2D
@@ -56,7 +57,12 @@ pix_ph_sz = 1.0
 det_elm_ph_sz = 1.0
 det_ph_offs = 0.0
 
-rect_ph = rectangle_mask(mat_sz=im_mat_sh, rect_sz=2, ul_corner=(4, 4))
+# phantom = rectangle_mask(mat_sz=im_mat_sh, rect_sz=4, ul_corner=(4, 4))
+phantom = rectangle_mask(mat_sz=im_mat_sh, rect_sz=2, ul_corner=(4, 4)) \
+        + rectangle_mask(mat_sz=im_mat_sh, rect_sz=2, ul_corner=(4, 13)) \
+        + rectangle_mask(mat_sz=im_mat_sh, rect_sz=2, ul_corner=(13, 13))
+
+# phantom = pacman_mask(mat_sz=im_mat_sh, cent=(9.5,9.5), rad=7, direc=0, ang=60)
 
 proj_20 = Projection2D(im_mat_sh=im_mat_sh,
                         det_len=det_len, 
@@ -67,7 +73,7 @@ proj_20 = Projection2D(im_mat_sh=im_mat_sh,
     
 single_pix_mats = proj_20.build_single_pixel_mats_dense()
 proj_single_pix = proj_20.gen_single_pixel_projs(single_pixel_mats=single_pix_mats)
-proj_mat = proj_20.single_mat_all_ang_proj(rect_ph, is_sparse=False)
+proj_mat = proj_20.single_mat_all_ang_proj(phantom, is_sparse=False)
 
 
 def plot_multiple_images(im_arr, nrows=1, ncols=2, fig_size=(12, 6), col_map="plasma", show_cbar=True):
@@ -84,13 +90,15 @@ def plot_multiple_images(im_arr, nrows=1, ncols=2, fig_size=(12, 6), col_map="pl
             plt.colorbar(ims[ind], cax=cax[ind])
     plt.show()
 
-# plotting single-pixels + projectogram
 num_pix = im_mat_sh[0] * im_mat_sh[1]
 num_elms = num_angs * det_len
-plot_multiple_images([single_pix_mats.reshape(num_pix, num_pix), proj_single_pix.reshape(num_pix, num_elms)])
+sinpix_mats_rs = single_pix_mats.reshape(num_pix, num_pix)
+proj_sinpix_rs = proj_single_pix.reshape(num_pix, num_elms)
 
-# plotting phantom projections
-# plot_multiple_images([rect_ph, proj_mat], col_map="ocean")
+# # plotting single-pixels + projectogram
+# plot_multiple_images([sinpix_mats_rs, proj_sinpix_rs])
+# # plotting phantom projections
+# plot_multiple_images([phantom, proj_mat], col_map="ocean")
 
 
 
@@ -108,3 +116,31 @@ for i in range(im_mat_sh[0]):
 
 print(pix_prod_list)
 
+
+# Most unimaginative approach: perform inversion on the masked pixels:
+proj_sinpix_masked = np.zeros((len(pix_prod_list), num_elms))
+
+# select the corresponding pixels:
+
+for idx, (i, j, prd) in enumerate(pix_prod_list):
+    proj_sinpix_masked[idx, :] = proj_single_pix[i, j, :, :].ravel()
+
+# # plot phantom, projections, and the masked sinpix projections
+# plot_multiple_images([phantom, proj_mat, proj_sinpix_masked])
+
+# Now get the pseudo-inverse of the masked projectogram using scipy linalg:
+def recon_with_masked_projectogram_psinv(proj_sinpix_masked, proj_mat, pix_prod_list):
+    ps_inv, ps_rank = linalg.pinv(proj_sinpix_masked.T, atol=None, rtol=None, return_rank=True, check_finite=True)
+    print(f"Pseudo-inverse shape: {ps_inv.shape}\nproj_mat shape: {proj_mat.shape}\nPseudo-inverse rank: {ps_rank}")
+
+    recon_data_psinv = ps_inv.dot(proj_mat.ravel())
+
+    im_recon_ps_inv = np.zeros(im_mat_sh)
+    for idx, (i, j, _) in enumerate(pix_prod_list):
+        im_recon_ps_inv[i, j] = recon_data_psinv[idx]
+    
+    return im_recon_ps_inv, ps_inv, ps_rank
+
+im_recon_ps_inv, ps_inv, ps_rank = recon_with_masked_projectogram_psinv(proj_sinpix_masked, proj_mat, pix_prod_list)
+
+plot_multiple_images([phantom, ps_inv.T, im_recon_ps_inv])
