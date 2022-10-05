@@ -51,13 +51,14 @@ from sklearn.metrics import mean_absolute_error
 # par-set:
 im_mat_sh = (20, 20)
 det_len = im_mat_sh[0]
-num_angs = 5
+num_angs = 4
 proj_angs = np.linspace(start=-90, stop=90, num=num_angs, endpoint=False)
 pix_ph_sz = 1.0
 det_elm_ph_sz = 1.0
 det_ph_offs = 0.0
 
 # phantom = rectangle_mask(mat_sz=im_mat_sh, rect_sz=4, ul_corner=(4, 4))
+
 # phantom = rectangle_mask(mat_sz=im_mat_sh, rect_sz=2, ul_corner=(4, 4)) \
 #         + rectangle_mask(mat_sz=im_mat_sh, rect_sz=2, ul_corner=(4, 13)) \
 #         + rectangle_mask(mat_sz=im_mat_sh, rect_sz=2, ul_corner=(13, 13))
@@ -114,7 +115,7 @@ for i in range(im_mat_sh[0]):
         # if min(prod_arr) > 0: print(i, j, min(prod_arr))
         if min(prod_arr) > 0: pix_prod_list.append((i, j, min(prod_arr)))
 
-print(pix_prod_list)
+# print(pix_prod_list)
 # [(4, 4, 2.0), (4, 5, 2.0), (4, 13, 1.0), (4, 14, 1.0), (5, 4, 2.0), (5, 5, 2.0), (5, 13, 1.0), 
 # (5, 14, 1.0), (13, 13, 1.0), (13, 14, 1.0), (14, 13, 1.0), (14, 14, 1.0)]
 
@@ -141,8 +142,9 @@ def recon_with_masked_projectogram_psinv(proj_sinpix_masked, proj_mat, pix_prod_
     
     return im_recon_ps_inv, ps_inv, ps_rank
 
-# im_recon_ps_inv, ps_inv, ps_rank = recon_with_masked_projectogram_psinv(proj_sinpix_masked, proj_mat, pix_prod_list)
-# plot_multiple_images([phantom, ps_inv.T, im_recon_ps_inv])
+# Reconstruct and plot
+im_recon_ps_inv, ps_inv, ps_rank = recon_with_masked_projectogram_psinv(proj_sinpix_masked, proj_mat, pix_prod_list)
+plot_multiple_images([phantom, ps_inv.T, im_recon_ps_inv])
 
 
 # steps for iterative reconstruction based on masked pizels and projectogram
@@ -152,56 +154,63 @@ def recon_with_masked_projectogram_psinv(proj_sinpix_masked, proj_mat, pix_prod_
 # Fourth: continue updating the value of the new highest min-prod pixels
 # Fifth: Stop when the proj_mat equal to zero or below certain energy, or certain number of steps
 
-im_recon = np.zeros(im_mat_sh)
+def recon_with_masked_projecogram_minprod(proj_single_pix, proj_mat, pix_prod_list):
 
-k_par = 5           # recon parameter: number of pixels we update in each pass before re-sorting
-k_par = min(k_par, len(pix_prod_list))
-trm_eps = 0.01  # recon parameter: how close do we get to solution in proj_mat (epsilon) before terminating
-upd_rt = 0.1    # update rate
+    im_recon = np.zeros(im_mat_sh)
 
-cur_proj_mat = proj_mat.copy()
+    # for now, default par-set
+    k_par = 10           # recon parameter: number of pixels we update in each pass before re-sorting
+    k_par = min(k_par, len(pix_prod_list))
+    trm_eps = 0.02  # recon parameter: how close do we get to solution in proj_mat (epsilon) before terminating
+    upd_rt = 0.02    # update rate
 
-masked_proj = proj_single_pix > 0   # for fast calculation of min-prod
+    cur_proj_mat = proj_mat.copy()
 
-# print( max(pix_prod_list, key=lambda lst: lst[2])[2] )  
+    masked_proj = proj_single_pix > 0   # for fast calculation of min-prod
 
-# # prep numpy arr:
-# pix_len = len(pix_prod_list)
-# pix_prod_arr = np.zeros((pix_len, 3))
-# for idx in range(pix_len):
-#     pix_prod_arr[idx] = [pix_prod_list[idx][0], pix_prod_list[idx][1], pix_prod_list[idx][2]]
+    # print( max(pix_prod_list, key=lambda lst: lst[2])[2] )  
 
-# better way: structures in the numpy array:
-dtype = [('i', int), ('j', int), ('minprod', float)]
-pix_prod_arr = np.array(pix_prod_list, dtype=dtype)     # structured array
-pix_prod_arr = np.sort(pix_prod_arr, order='minprod')[::-1] # reverse sort
+    # # prep numpy arr:
+    # pix_len = len(pix_prod_list)
+    # pix_prod_arr = np.zeros((pix_len, 3))
+    # for idx in range(pix_len):
+    #     pix_prod_arr[idx] = [pix_prod_list[idx][0], pix_prod_list[idx][1], pix_prod_list[idx][2]]
 
-while pix_prod_arr[0]['minprod'] > trm_eps:    # termination cond. first element is the largest min-prod after sort 
-    # iteration logic:
+    # better way: structures in the numpy array:
+    dtype = [('i', int), ('j', int), ('minprod', float)]
+    pix_prod_arr = np.array(pix_prod_list, dtype=dtype)     # structured array
+    pix_prod_arr = np.sort(pix_prod_arr, order='minprod')[::-1] # reverse sort
 
-    # update im_recon based on min_prod values
-    for idx in range(k_par):
-        pix = (pix_prod_arr[idx]['i'], pix_prod_arr[idx]['j'])
-        # print(pix)
-        pix_update = upd_rt * pix_prod_arr[idx][2]
-        im_recon[pix] += upd_rt * pix_prod_arr[idx][2]
-    
-        # update the current proj_mat, by subtracting projections
-        # Better way would be to add sin-pix matrices
-        # cur_proj_mat = proj_20.single_mat_all_ang_proj(im_recon)
-        cur_proj_mat -= proj_single_pix[pix] * pix_update
-        # print(cur_proj_mat)
+    while pix_prod_arr[0]['minprod'] > trm_eps:    # termination cond. first element is the largest min-prod after sort 
+        # iteration logic:
 
-    # Re-calculate min-prod for the masked pixels (after the update loop)
-    for idx in range(k_par):
-        pix = (pix_prod_arr[idx]['i'], pix_prod_arr[idx]['j'])
-        # print(pix)
-        prod_arr = proj_single_pix[pix][masked_proj[pix]] * cur_proj_mat[masked_proj[pix]]
-        pix_prod_arr[idx][2] = min(prod_arr)
+        # update im_recon based on min_prod values
+        for idx in range(k_par):
+            pix = (pix_prod_arr[idx]['i'], pix_prod_arr[idx]['j'])
+            # print(pix)
+            pix_update = upd_rt * pix_prod_arr[idx][2]
+            im_recon[pix] += upd_rt * pix_prod_arr[idx][2]
+        
+            # update the current proj_mat, by subtracting projections
+            # Better way would be to add sin-pix matrices
+            # cur_proj_mat = proj_20.single_mat_all_ang_proj(im_recon)
+            cur_proj_mat -= proj_single_pix[pix] * pix_update
+            # print(cur_proj_mat)
 
-    # re-sort the pix_prod_array (descending)
-    pix_prod_arr = np.sort(pix_prod_arr, order='minprod')[::-1]
+        # Re-calculate min-prod for the masked pixels (after the update loop)
+        for idx in range(k_par):
+            pix = (pix_prod_arr[idx]['i'], pix_prod_arr[idx]['j'])
+            # print(pix)
+            prod_arr = proj_single_pix[pix][masked_proj[pix]] * cur_proj_mat[masked_proj[pix]]
+            pix_prod_arr[idx][2] = min(prod_arr)
 
-    print(pix_prod_arr)
+        # re-sort the pix_prod_array (descending)
+        pix_prod_arr = np.sort(pix_prod_arr, order='minprod')[::-1]
+
+        # print(pix_prod_arr)
+
+    return im_recon
+
+im_recon = recon_with_masked_projecogram_minprod(proj_single_pix, proj_mat, pix_prod_list)
 
 plot_multiple_images([phantom, im_recon])
