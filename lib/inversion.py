@@ -28,7 +28,7 @@ class Inversion2D:
             raise Exception(f"Constructor Parameters Inconsistent: \n\
             projectogram {projectogram.shape}, image: {im_mat_sh}, angles: {len(proj_angs)}, detector: {det_len}")
 
-        self.projectoram = projectogram
+        self.projectogram = projectogram
         self.single_pixel_mats = single_pixel_mats
 
         self.im_mat_sh = im_mat_sh
@@ -51,7 +51,7 @@ class Inversion2D:
     # Labels y are the single pixel (one-hot) matrices
     # X and y are returned both in 2D form
     def prepare_single_pixel_Xy(self):
-        X = self.projectoram.reshape(self.N * self.M, self.proj_angs_sz * self.det_len)
+        X = self.projectogram.reshape(self.N * self.M, self.proj_angs_sz * self.det_len)
         y = self.single_pixel_mats.reshape(self.N * self.M, self.N * self.M)
 
         return X, y
@@ -176,3 +176,66 @@ class Inversion2D:
         y_pred = (self.pseudoinv.T).dot(X)    # matrix multiplicaltion
 
         return y_pred.reshape(self.N, self.M)
+
+
+    # pseudo-inverse reconstruction whilt applying the mask to the reconstructed image
+    def general_projection_recon_pseudoinv_masked(self, proj_mat, verbose=False):
+        
+        pix_mask = np.full(self.im_mat_sh, False)
+
+        for i in range(self.im_mat_sh[0]):
+            for j in range(self.im_mat_sh[1]):
+                masked_idx = self.projectogram[i, j] > 0
+                prod_arr = self.projectogram[i, j, masked_idx] * proj_mat[masked_idx]
+                if min(prod_arr) > 0: pix_mask[i, j] = True
+        
+        im_recon = np.zeros(self.im_mat_sh)
+        im_recon_psinv = self.general_projection_recon_pseudoinv(proj_mat)
+
+        im_recon[pix_mask] = im_recon_psinv[pix_mask]
+
+        return im_recon, self.pseudoinv, self.pseudorank
+
+
+    
+    # pseudo-inverse reconstruction whilt applying the mask to the projectogram
+    def general_projection_recon_pseudoinv_masked_2(self, proj_mat, verbose=False):
+        
+        pix_mask = np.full(self.im_mat_sh, False)
+        pix_prod_list = []
+
+        for i in range(self.im_mat_sh[0]):
+            for j in range(self.im_mat_sh[1]):
+                masked_idx = self.projectogram[i, j] > 0
+                prod_arr = self.projectogram[i, j, masked_idx] * proj_mat[masked_idx]
+                # if min(prod_arr) > 0: print(i, j, min(prod_arr))
+                # if min(prod_arr) > 0: pix_prod_list.append((i, j, min(prod_arr)))
+                if min(prod_arr) > 0: 
+                    pix_mask[i, j] = True
+                    pix_prod_list.append((i, j, min(prod_arr)))
+        
+        if verbose: print("Nonzero Pixels Mask:\n", pix_prod_list)
+
+        mask_len = len(pix_prod_list)
+        projectogram_masked = np.zeros((mask_len, self.proj_angs_sz * self.det_len))
+
+        for idx, (i, j, _) in enumerate(pix_prod_list):
+            projectogram_masked[idx, :] = self.projectogram[i, j, :, :].ravel()
+        
+        ps_inv, ps_rank = linalg.pinv(projectogram_masked.T, atol=None, rtol=None, return_rank=True, check_finite=True)
+        if verbose:
+            print(f"Pseudo-inverse shape: {ps_inv.shape}\nproj_mat shape: {proj_mat.shape}\nPseudo-inverse rank: {ps_rank}")
+
+        recon_data_psinv = ps_inv.dot(proj_mat.ravel())
+
+        im_recon = np.zeros(self.im_mat_sh)
+        for idx, (i, j, _) in enumerate(pix_prod_list):
+            im_recon[i, j] = recon_data_psinv[idx]
+
+        return im_recon, ps_inv, ps_rank
+    
+
+
+        
+        
+
