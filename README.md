@@ -19,4 +19,15 @@ The rank of the projectogram determines existence of a unique solution for the s
 
 Example of (a) a single pixel image in a 20x20 matrix, and (b) projections along 12 independent angles with 15 degree separation. Projection are on a detector array the with the same physical size and number of elements as rows of the image matrix.
 
-Note that for some projection angles -- zero-based index from 2 to 4 -- the detector length is not sufficient to span the entire projection, resulting in cropping. This contributes to the above mentioned non-shift-invariance quality of the transformation.
+Note that for some projection angles -- zero-based index from 2 to 4 -- the detector length is not sufficient to span the entire projection, resulting in cropped data. This is a contributing factor to the above mentioned non-shift-invariance property of the transformation.
+
+![sigle pixel image and projections](/figures/single_pixel_image_projections.png)
+
+Due to the nearest-neighbor assignment of values from pixels to the delection elements, the projection values are binary.
+
+The projectogram, which is a matrix representation of the forward projection operation, is obtained by creating single pixel projections for all pixels, followed by layering them in a matrix form where each line represents projection information obtained from a single pixel image.
+
+Similar to the previous images, the values here are all binary as well.
+
+![projectogram 20x20 12 angs](/figures/projectogram_20x20.png)
+
