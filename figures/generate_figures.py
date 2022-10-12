@@ -86,7 +86,7 @@ def initialize_objs(num_angs=12,
                     det_elm_ph_sz=det_elm_ph_sz,
                     det_ph_offs=det_ph_offs)
 
-    print(parset.im_mat_sh)      
+    # print(parset.im_mat_sh)
     
     proj_obj = Projection2D(im_mat_sh=parset.im_mat_sh, 
                             det_len=parset.det_len, 
@@ -94,13 +94,27 @@ def initialize_objs(num_angs=12,
                             det_elm_ph_sz=parset.det_elm_ph_sz, 
                             det_ph_offs=parset.det_ph_offs, 
                             proj_angs=parset.proj_angs)
+    
+    sinpix = proj_obj.build_single_pixel_mats_dense()
+    projectogram = proj_obj.gen_single_pixel_projs(sinpix)
 
-    return parset, proj_obj
+    # print(projectogram.shape)
+
+    inverse_obj = Inversion2D(projectogram=projectogram,
+                                single_pixel_mats = sinpix,
+                                im_mat_sh=parset.im_mat_sh, 
+                                det_len=parset.det_len,
+                                proj_angs=parset.proj_angs, 
+                                pix_ph_sz=parset.pix_ph_sz,
+                                det_elm_ph_sz=parset.det_elm_ph_sz, 
+                                det_ph_offs=parset.det_ph_offs)
+
+    return parset, proj_obj, inverse_obj
 
 
 def generate_figures():
     
-    parset, proj_20 = initialize_objs(num_angs=12, im_mat_sh=(20, 20), det_len=20)
+    parset, proj_20, inverse_20 = initialize_objs(num_angs=12, im_mat_sh=(20, 20), det_len=20)
 
     sinpix_20 = proj_20.build_single_pixel_mats_dense()
     projectogram = proj_20.gen_single_pixel_projs(sinpix_20)
@@ -125,10 +139,9 @@ def generate_figures():
         yi = l_len * (1 + np.sin(theta))
         # axs[0].plot([x0, xi], [y0, yi], color="w")
         axs[0].arrow(x0, y0, (xi-x0), (yi-y0), color="w", length_includes_head=True, head_length=1, head_width=0.4)
-        
+    
     plt.show()
 
-    pg_rank = 0
     # plot the projectogram
     fig, axs = plot_multiple_images([projectogram.reshape((400, 240))], 
                                     nrows=1, ncols=1, fig_size=(10,10),
@@ -137,6 +150,34 @@ def generate_figures():
     axs.set_ylabel("pixels")
 
     # fig, axs = plot_multiple_images([np.zeros((20,20))])
+    plt.show()
+
+    # inversion: rank, single rconstruction, and full recongram:
+    ps_inv_20, ps_rank_20 = inverse_20.get_projectrogram_pseudoinv(verbose=True)
+
+    sinpix_20_recon = inverse_20.single_pixel_recon_pseudoinv()
+
+    # plot the pseudoinverse matrix
+    fig, axs = plot_multiple_images([ps_inv_20], nrows=1, ncols=1,
+                            titles_arr=[f"Pseoduinverse Matrix\n20x20 Image Projected along 12 Angles\nRank: {ps_rank_20}"])
+
+    axs.set_xlabel("pixel index")
+    axs.set_ylabel("projection element index")
+    plt.show()
+
+
+    sinpix_recon = sinpix_20_recon.reshape((20, 20, 20, 20))[2, 2].squeeze()
+    # plot the (2,2) reconstruction and the full recongram
+    fig, axs = plot_multiple_images([sinpix_recon, sinpix_20_recon], nrows=1, ncols=2,
+                            titles_arr=["sinpix (2,2) reconstruction", "Full Reconstructogram for the 20x20 Image"])
+    
+    axs[0].set_xticks(np.arange(0, 20, step=4))
+    axs[0].set_yticks(np.arange(0, 20, step=4))
+    axs[1].set_xticks(np.arange(0, 400, step=50))
+    axs[1].set_yticks(np.arange(0, 400, step=50))
+    
+    axs[1].set_xlabel("pixel index")
+    axs[1].set_ylabel("pixel index")
     plt.show()
 
     return
