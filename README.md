@@ -1,4 +1,7 @@
 # Projectogram and Reconstructogram
+
+By: P. S. Mamkani
+
 A projectogram is a visual representation of the operation of projecting higher dimenesional data to a lower dimensional space, whereby projections of single-pixel images are presented in a matrix form. A reconstructogram, on the other hand, visualizes the reconstruction outcome of single pixel images from the available projections.
 
 ## Motive
@@ -51,3 +54,38 @@ Using the above pseudoinverse, the reconstruction of the sinpix (2,3) is achieve
 ![Recongram 20x20 12 angles](/figures/fig04_sinpix_recongram_20x20.png)
 Figure 4. Single pixel reconstruction at (2,2) location, representing a single row in the full reconstructogram
 
+
+## Application Example
+
+### Masked Reconstruction
+
+In many imaging applications certain prior information about the object being imaged can be incorporated into the image reconstruction algorithm. One simple case is the non-negativity condition, i.e. image pixels are constrained to positive or zero values. This is especially the case when the relevant information is related to object density, as in X-ray where attenuation is related to the atomic number, or radioactive emission density, as in the cases of nuclear imaging techniques.
+
+Masking is perhaps the simplest application of the projectogram, where a mask enclosing all possible nonzero image pixels is used to limit the reconstruction area. The following steps summarize the mask generatio process:
+
+(1) Generate all single pixel projections --projectogram-- for the same projection angles as those used in the original image projection -- the sinogram
+(2) Calculate the "support" of the image sinogram, i.e. the set of all projection elements with positive values
+(3) For each pixel, if the support of the pixel projection is is a subset of the image projection support, the pixel belongs to the mask, and vice versa.
+
+Once the reconstruction mask is generated, it is used to filter for pixels with positive values, while everything outside is set to zero.
+
+Below we have the 50x50 image of the "Pacman" used as the reference -- or "phantom", -- the projections generated along 10 angles uniformly distributed from 0 degrees (inclusive) to 180 degrees (exclusive), and the reconstructed image using the pseudoinverse technique without applying any non--negativity constraints. The reason for using only the half-plane for selecting projection angles is that for "parallel beam" projections the data obtained from opposite angles are identical up to a reflection around the center. This is generally not the case for point-source/fan-beam geometries involving depth-dependent magnification effects.
+
+![Pacman 50x50 - Sinogram - Pseudoinverse Recon]("/figures/fig05_pacman50_proj_recon.png")
+Figure 5. A 50x50 pacman image reconstructed from 10 projections without masking enforcement
+
+By generating the mask and applying it to the reconstructed image, some of the spusrous reconstruction artifacts on the periphery can be removed:
+
+![Pacman mask - masked recon]("/figures/fig06_pacman50_masked_recon.png")
+Figure 6. Enforcing of non-negativity condition and masking to arrive at the masked reconstruction
+
+The streak artifacts within the centeral region of the image, contained inside the conves mask, are not removed, however. The masking technique is especially of significance when dealing with sparsely populated images.
+
+Below we have the reference image of three small 2x2 squares within the 50x50 matrix, reconstructed using only 5 projection angles, with and without masking:
+
+![Sparse image - psinv recon - masked recon]("/figures/fig07_sparse50_masked_recon.png")
+
+
+
+
+First Published: 10/13/2022
