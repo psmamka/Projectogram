@@ -194,7 +194,7 @@ class Inversion2D:
 
         im_recon[pix_mask] = im_recon_psinv[pix_mask]
 
-        return im_recon, self.pseudoinv, self.pseudorank
+        return im_recon, self.pseudoinv, self.pseudorank, pix_mask
 
 
     
@@ -232,7 +232,7 @@ class Inversion2D:
         for idx, (i, j, _) in enumerate(pix_prod_list):
             im_recon[i, j] = recon_data_psinv[idx]
 
-        return im_recon, ps_inv, ps_rank
+        return im_recon, ps_inv, ps_rank, pix_mask
     
 
 

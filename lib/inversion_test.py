@@ -363,7 +363,7 @@ def pseudoinv_pacman_masked_20(num_angs=5, plot_proj=True, plot_recon=True):
                                 det_elm_ph_sz=det_elm_ph_sz, 
                                 det_ph_offs=det_ph_offs)
 
-    recon_20, ps_inv, ps_rank_20 = inverse_20.general_projection_recon_pseudoinv_masked(proj_mat, verbose=False)
+    recon_20, ps_inv, ps_rank_20, _ = inverse_20.general_projection_recon_pseudoinv_masked(proj_mat, verbose=False)
 
     if plot_recon:
         fig, axs = plt.subplots(nrows=1, ncols=2)
@@ -430,7 +430,7 @@ def pseudoinv_pacman_masked_20_2(num_angs=5, plot_proj=True, plot_recon=True):
                                 det_elm_ph_sz=det_elm_ph_sz, 
                                 det_ph_offs=det_ph_offs)
 
-    recon_20, ps_inv, ps_rank_20 = inverse_20.general_projection_recon_pseudoinv_masked_2(proj_mat, verbose=False)
+    recon_20, ps_inv, ps_rank_20, _ = inverse_20.general_projection_recon_pseudoinv_masked_2(proj_mat, verbose=False)
 
     if plot_recon:
         fig, axs = plt.subplots(nrows=1, ncols=2)
@@ -458,8 +458,8 @@ def pseudoinv_pacman_masked_20_2(num_angs=5, plot_proj=True, plot_recon=True):
 
 # train_instance_20(plot_sinpix=True, plot_projgram=True)
 # train_pacman_20(num_angs=20, plot_proj=False, plot_recon=True)
-# pseudoinv_instance_20(num_angs=10, plot_sinpix=True, plot_projgram=True)
+pseudoinv_instance_20(num_angs=10, plot_sinpix=True, plot_projgram=True)
 # pseudoinv_instance_20(num_angs=4, plot_sinpix=True, plot_projgram=True)
 
-pseudoinv_pacman_20(num_angs=4, plot_proj=False, plot_recon=True)
-pseudoinv_pacman_masked_20(num_angs=4, plot_proj=False, plot_recon=True)
+# pseudoinv_pacman_20(num_angs=4, plot_proj=False, plot_recon=True)
+# pseudoinv_pacman_masked_20(num_angs=4, plot_proj=False, plot_recon=True)
