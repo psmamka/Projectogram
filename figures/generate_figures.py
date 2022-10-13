@@ -112,7 +112,7 @@ def initialize_objs(num_angs=12,
     return parset, proj_obj, inverse_obj
 
 
-def generate_figures():
+def gen_figures_tech():
     
     parset, proj_20, inverse_20 = initialize_objs(num_angs=12, im_mat_sh=(20, 20), det_len=20)
 
@@ -183,5 +183,60 @@ def generate_figures():
     return
 
 
-generate_figures()
+def gen_figures_mask():
 
+    pacman_50 = pacman_mask(50, (24.5,24.5), 18, direc=0, ang=60)
+
+    parset, proj_50, inverse_50 = initialize_objs(num_angs=10, im_mat_sh=(50, 50), det_len=50)
+
+    proj_mat = proj_50.single_mat_all_ang_proj(pacman_50, is_sparse=False)
+
+    recon_50= inverse_50.general_projection_recon_pseudoinv(proj_mat=proj_mat)
+
+    fig, axs = plot_multiple_images([pacman_50, proj_mat, recon_50], fig_size=(18, 6), 
+                                        titles_arr=["Original Image", "Projections", "Pseudoinverse Reconstruction"])
+    plt.show()
+
+    recon_masked, ps_inv, ps_rank, mask = inverse_50.general_projection_recon_pseudoinv_masked(proj_mat, verbose=False)
+
+    recon_50[recon_50 < 0] = 0
+    recon_masked[recon_masked < 0] = 0
+    fig, axs = plot_multiple_images([recon_50, mask, recon_masked], fig_size=(18, 6), 
+                                    titles_arr=["Pseudoinverse Reconstruction with \nNonnegative Constraint Applied", \
+                                        "Reconstruction Mask Obtained\nfrom Projectogram ∩ Sinogram", \
+                                            "Pacman Image Reconstructed\nwith the Mask Applied"])
+    plt.show()
+
+
+    # sparse image
+
+    squares_img = rectangle_mask(mat_sz=(50,50), rect_sz=2, ul_corner=(3,3)) + \
+                    rectangle_mask(mat_sz=(50,50), rect_sz=2, ul_corner=(30,10)) + \
+                    rectangle_mask(mat_sz=(50,50), rect_sz=2, ul_corner=(20,35))
+
+    parset, proj_50, inverse_50 = initialize_objs(num_angs=5, im_mat_sh=(50, 50), det_len=50)
+
+    proj_mat = proj_50.single_mat_all_ang_proj(squares_img, is_sparse=False)
+
+    recon_50= inverse_50.general_projection_recon_pseudoinv(proj_mat=proj_mat)
+
+    recon_masked, ps_inv, ps_rank, mask = inverse_50.general_projection_recon_pseudoinv_masked(proj_mat, verbose=False)
+
+    recon_50[recon_50 < 0] = 0
+    recon_masked[recon_masked < 0] = 0
+
+    fig, axs = plot_multiple_images([squares_img, recon_50, recon_masked], fig_size=(18, 6), 
+                                    titles_arr=["Original Sparse Image of Squares", \
+                                        "Pseudoinverse Reconstruction with \nNonnegative Constraint Applied", \
+                                        "Squares Image Reconstructed\nwith the Mask Applied"])
+    plt.show()
+
+
+
+
+
+    return
+
+
+# gen_figures_tech()
+gen_figures_mask()
