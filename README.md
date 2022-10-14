@@ -86,6 +86,21 @@ Below we have the reference image of three small 2x2 squares within the 50x50 ma
 ![Sparse image - psinv recon - masked recon](/figures/fig07_sparse50_masked_recon.png)
 Figure 7. Reconstruction of a sparse image of three 2x2 squares before and after application of the mask
 
+It is noted that presenting the reconstructogram for non-linear algorithms can be misleading, as single pixel reconstruction would be almost exact up to a normalization constant -- which is not the case for dense images.
+
+## General Remarks
+
+The projectogram and reconstructogram techniques are presented as an aid for qualitative visualiation of the projection and (linear) reconstruction operations, respectively. The rank of the projectogram provides essential information regarding the dimensionality of the projection data. The ratio of the projectogram rank to the number of indeendent basis vectors in the image space, i.e. number of pixels, provides us with insight concerning the sparseness of the information, and subsequently the size of the solution null space.
+
+Use of prior information regarding possible image solutions can help up search for "better" solutions by limiting the size of the null space. One such assumption is the pixel non-negativity constraint, of relevance to most medical imaging modalities. The masked reconstruction presented here as a simple application of the projectogram technique along with the non-negativity constraint, whereby pixels are filtered based on the criterion of having projection footprints contained within the image projection support. It is argued that in cases of reconstruction of sparse data/images -- e.g. in imaging scenarios searching for subtle changes in metabolic signatures in confined areas, say metastases hotspots in the backdrop of stationary anato-physiological data -- the masked approach could be of significance.
+
+## Selected Resources
+
+For a quick introduction to tomography, see the Wikipedai page on tomograph reconstruction [here](https://en.wikipedia.org/wiki/Tomographic_reconstruction). For a classic introduction to Radon transform, see S. R. Dean's book [here](https://books.google.com/books?id=BXiXswEACAAJ). Kak and Slaney's book on compterized tomographic imaging is available [here](http://www.slaney.org/pct/).
+
+The TomoPy library ([PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4181643/), [GitHub](https://github.com/tomopy/tomopy)) implements multiple techniques for image reconstruction in python. For cone-beam x-ray image reconstruction, CONRAD ([PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3820625/) [GitHub](https://github.com/akmaier/CONRAD)) is available. The ASTRA toolbox ([GitHub](https://github.com/astra-toolbox/astra-toolbox)) and the OSCaR package([UToronto](http://www.cs.toronto.edu/~nrezvani/OSCaR.html)) provide Matlab interface for their image reconstruction code. PYRO-NN ([GitHub](https://github.com/csyben/PYRO-NN)) provides a framework for integration of image reconstruction algorithms into the TensorFlow deep learning environment.
 
 
-First Published: 10/13/2022
+First Published:    13-Oct-2022
+Last Updated:       14-Oct-2022
+
