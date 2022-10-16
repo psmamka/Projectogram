@@ -27,7 +27,7 @@ Example of (a) a single pixel image in a 20x20 matrix, and (b) projections along
 Note that for some projection angles -- zero-based index from 2 to 4 -- the detector length is not sufficient to span the entire projection, resulting in cropped data. This is a contributing factor to the above mentioned non-shift-invariance property of the transformation.
 
 ![sigle pixel image and projections](/figures/fig01_single_pixel_image_projections.png)
-Figure 1. A single-pixel image and its 12 projections
+Figure 1. A single-pixel image and its 12 projections covering from -90 to +90 degrees (inclusive/exclusive) in 15-degree steps
 
 Due to the nearest-neighbor assignment of values from pixels to the delection elements, the projection values are binary.
 
@@ -54,6 +54,7 @@ Using the above pseudoinverse, the reconstruction of the sinpix (2,3) is achieve
 ![Recongram 20x20 12 angles](/figures/fig04_sinpix_recongram_20x20.png)
 Figure 4. Single pixel reconstruction at (2,2) location, representing a single row in the full reconstructogram
 
+Alternating Bow-tie/block patterns around the main diagonal of the reconstructogram represent a non-Toeplitz matrix, confirming the non-shift-invariant nature of the inverse operation expected from the finite matrix size and the resulting boundary effects.
 
 ## Application Example
 
@@ -96,11 +97,12 @@ Use of prior information regarding possible image solutions can help up search f
 
 ## Selected Resources
 
-For a quick introduction to tomography, see the Wikipedai page on tomograph reconstruction [here](https://en.wikipedia.org/wiki/Tomographic_reconstruction). For a classic introduction to Radon transform, see S. R. Dean's book [here](https://books.google.com/books?id=BXiXswEACAAJ). Kak and Slaney's book on compterized tomographic imaging is available [here](http://www.slaney.org/pct/).
+For a quick introduction to tomography, see the Wikipedai page on tomograph reconstruction [here](https://en.wikipedia.org/wiki/Tomographic_reconstruction). For a classic introduction to the Radon transform, see S. R. Dean's book [here](https://books.google.com/books?id=BXiXswEACAAJ). Kak and Slaney's book on compterized tomographic imaging is available [here](http://www.slaney.org/pct/).
 
-The TomoPy library ([PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4181643/), [GitHub](https://github.com/tomopy/tomopy)) implements multiple techniques for image reconstruction in python. For cone-beam x-ray image reconstruction, CONRAD ([PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3820625/) [GitHub](https://github.com/akmaier/CONRAD)) is available. The ASTRA toolbox ([GitHub](https://github.com/astra-toolbox/astra-toolbox)) and the OSCaR package([UToronto](http://www.cs.toronto.edu/~nrezvani/OSCaR.html)) provide Matlab interface for their image reconstruction code. PYRO-NN ([GitHub](https://github.com/csyben/PYRO-NN)) provides a framework for integration of image reconstruction algorithms into the TensorFlow deep learning environment.
+Available code libraries include scikit-image ([Webpage](https://scikit-image.org), [GitHub](https://github.com/scikit-image/scikit-image)) offering  in its transforms toolbox an implementation of the Radon transforms and its inverse based on the filtered backprojection. The TomoPy library ([PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4181643/), [GitHub](https://github.com/tomopy/tomopy)) implements multiple techniques for image reconstruction in python. For cone-beam x-ray image reconstruction, CONRAD ([PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3820625/) [GitHub](https://github.com/akmaier/CONRAD)) is available. The ASTRA toolbox ([GitHub](https://github.com/astra-toolbox/astra-toolbox)) and the OSCaR package([UToronto](http://www.cs.toronto.edu/~nrezvani/OSCaR.html)) provide Matlab interface for their image reconstruction code. PYRO-NN ([GitHub](https://github.com/csyben/PYRO-NN)) provides a framework for integration of image reconstruction algorithms into the TensorFlow deep learning environment.
+
 
 
 First Published:    13-Oct-2022
-Last Updated:       14-Oct-2022
+Last Updated:       16-Oct-2022
 
