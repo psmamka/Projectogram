@@ -1,3 +1,20 @@
+# Tests for the Projection2D class
+
+# Copyright (C) 2022  P. S. Mamkani
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>
+
 import numpy as np
 from projection import Projection2D
 from phantom import pacman_mask
@@ -92,4 +109,4 @@ def all_single_pix_proj_20(im_shp=(20,20), det_len=20, num_angs=20):
 
 # simple_20()
 # one_single_pix_proj_20(im_shp=(20,20), det_len=24, num_angs=20)
-all_single_pix_proj_20(im_shp=(20,20), det_len=20, num_angs=20)
+# all_single_pix_proj_20(im_shp=(20,20), det_len=20, num_angs=20)

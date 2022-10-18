@@ -1,3 +1,20 @@
+# Tests for the Inversion2D class
+
+# Copyright (C) 2022  P. S. Mamkani
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import numpy as np
 
 from projection import Projection2D
@@ -458,7 +475,7 @@ def pseudoinv_pacman_masked_20_2(num_angs=5, plot_proj=True, plot_recon=True):
 
 # train_instance_20(plot_sinpix=True, plot_projgram=True)
 # train_pacman_20(num_angs=20, plot_proj=False, plot_recon=True)
-pseudoinv_instance_20(num_angs=10, plot_sinpix=True, plot_projgram=True)
+# pseudoinv_instance_20(num_angs=10, plot_sinpix=True, plot_projgram=True)
 # pseudoinv_instance_20(num_angs=4, plot_sinpix=True, plot_projgram=True)
 
 # pseudoinv_pacman_20(num_angs=4, plot_proj=False, plot_recon=True)

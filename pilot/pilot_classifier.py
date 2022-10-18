@@ -1,3 +1,20 @@
+# Pilot project for the single pixel classifiers methodologies
+
+# Copyright (C) 2022  P. S. Mamkani
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>
+
 import sys
 sys.path.append('../lib')
 
@@ -115,9 +132,12 @@ for i in range(im_mat_sh[0]):
         # if min(prod_arr) > 0: print(i, j, min(prod_arr))
         if min(prod_arr) > 0: pix_prod_list.append((i, j, min(prod_arr)))
 
-# print(pix_prod_list)
+print(pix_prod_list)
 # [(4, 4, 2.0), (4, 5, 2.0), (4, 13, 1.0), (4, 14, 1.0), (5, 4, 2.0), (5, 5, 2.0), (5, 13, 1.0), 
 # (5, 14, 1.0), (13, 13, 1.0), (13, 14, 1.0), (14, 13, 1.0), (14, 14, 1.0)]
+
+# refactored version
+
 
 # Most unimaginative approach: perform inversion on the masked pixels:
 proj_sinpix_masked = np.zeros((len(pix_prod_list), num_elms))
