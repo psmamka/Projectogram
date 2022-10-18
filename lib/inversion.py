@@ -84,66 +84,6 @@ class Inversion2D:
 
         return X_rank
     
-    # Use sk-learn (or any OLS library) to calculate parameters of a linear model
-    # fit_intercept is False, since we don't expect any bias in detector output (w/ or w/o noise)
-    # n_jobs of -1 allows the machine to decide the number of cpu cores used for training
-    def train_lin_reg_model(self):
-
-        self.linear_model = LinearRegression(fit_intercept=False, n_jobs=-1)
-
-        X, y = self.prepare_single_pixel_Xy()
-
-        self.linear_model.fit(X, y)
-
-        return self.linear_model
-
-    # Use the lin_reg model to predict/reconstruct the single pixel matrices from the projectogram
-    def single_pixel_lin_reg_reconstruct(self):
-
-        if self.linear_model is None:
-            # raise Exception(f"self.linear_model is None.")
-            self.train_lin_reg_model()
-        
-        X, _ = self.prepare_single_pixel_Xy()
-        y_pred = self.linear_model.predict(X)
-
-        return y_pred
-    
-
-    # RMSE (root mean squared error), MAE (mean absolute error) of single pixel reconstructions from 
-    # the projectogram using the lin_reg model
-    # Later: write a method to get the distance as input and calc the err
-    def single_pixel_lin_reg_errors(self, verbose=False):
-        _, y = self.prepare_single_pixel_Xy()
-        y_pred = self.single_pixel_lin_reg_reconstruct()
-
-        rmse_single_pix = mean_squared_error(y, y_pred, squared=False)
-        mae_single_pix = mean_absolute_error(y, y_pred)
-
-        if verbose:
-            print("Single-pixel reconstructions errors from the projectogram using the trained Linear Regression Model:")
-            print(f"Root Mean Squared Error: {rmse_single_pix:.4f}")
-            print(f"Mean Absolute Error: {mae_single_pix:.4f}")
-
-        return rmse_single_pix, mae_single_pix
-
-
-    # Reconstruction of an image from projections matrix obtained in accordance with the __init__ parameters
-    # later: API with the Projection2D class
-    def general_projection_reconstruction(self, proj_mat):
-        # validate shape
-        if proj_mat.shape != (self.proj_angs_sz, self.det_len):
-            raise Exception(f"Projection matrix shape {proj_mat.shape} not compatible with angles length {self.proj_angs_sz}, detector length {self.det_len}")
-        
-        # validatethat the linear model is already trained
-        if self.linear_model is None:
-            self.train_lin_reg_model()
-
-        X = proj_mat.reshape(1, -1)
-        y_pred = self.linear_model.predict(X)
-
-        return y_pred.reshape(self.N, self.M)
-
 
     # The pseudo-inverse method, using scipy.linalg's SVD-based generalized inverse technique
     # The idea is that the projectogram's (pseudo-) inverse can be used to reconstruct images:
@@ -213,8 +153,7 @@ class Inversion2D:
 
         return im_recon, self.pseudoinv, self.pseudorank, pix_mask
 
-
-    
+   
     # pseudo-inverse reconstruction whilt applying the mask to the projectogram
     def general_projection_recon_pseudoinv_masked_2(self, proj_mat, verbose=False):
         
@@ -252,7 +191,64 @@ class Inversion2D:
         return im_recon, ps_inv, ps_rank, pix_mask
     
 
+    # Use sk-learn OLS to calculate parameters of a linear model
+    # fit_intercept is False, since we don't expect any bias in detector output (w/ or w/o noise)
+    # n_jobs of -1 allows the machine to decide the number of cpu cores used for training
+    def train_lin_reg_model(self):
 
+        self.linear_model = LinearRegression(fit_intercept=False, n_jobs=-1)
+
+        X, y = self.prepare_single_pixel_Xy()
+
+        self.linear_model.fit(X, y)
+
+        return self.linear_model
+
+    # Use the lin_reg model to predict/reconstruct the single pixel matrices from the projectogram
+    def single_pixel_lin_reg_reconstruct(self):
+
+        if self.linear_model is None:
+            # raise Exception(f"self.linear_model is None.")
+            self.train_lin_reg_model()
         
+        X, _ = self.prepare_single_pixel_Xy()
+        y_pred = self.linear_model.predict(X)
+
+        return y_pred
+    
+
+    # RMSE (root mean squared error), MAE (mean absolute error) of single pixel reconstructions from 
+    # the projectogram using the lin_reg model
+    # Later: write a method to get the distance as input and calc the err
+    def single_pixel_lin_reg_errors(self, verbose=False):
+        _, y = self.prepare_single_pixel_Xy()
+        y_pred = self.single_pixel_lin_reg_reconstruct()
+
+        rmse_single_pix = mean_squared_error(y, y_pred, squared=False)
+        mae_single_pix = mean_absolute_error(y, y_pred)
+
+        if verbose:
+            print("Single-pixel reconstructions errors from the projectogram using the trained Linear Regression Model:")
+            print(f"Root Mean Squared Error: {rmse_single_pix:.4f}")
+            print(f"Mean Absolute Error: {mae_single_pix:.4f}")
+
+        return rmse_single_pix, mae_single_pix
+
+
+    # LinReg Reconstruction of an image from projections matrix obtained in accordance with the __init__ parameters
+    # later: API with the Projection2D class
+    def general_projection_reconstruction(self, proj_mat):
+        # validate shape
+        if proj_mat.shape != (self.proj_angs_sz, self.det_len):
+            raise Exception(f"Projection matrix shape {proj_mat.shape} not compatible with angles length {self.proj_angs_sz}, detector length {self.det_len}")
+        
+        # validatethat the linear model is already trained
+        if self.linear_model is None:
+            self.train_lin_reg_model()
+
+        X = proj_mat.reshape(1, -1)
+        y_pred = self.linear_model.predict(X)
+
+        return y_pred.reshape(self.N, self.M)
         
 
